@@ -1,0 +1,16 @@
+{
+  "name": "@shiro/studio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Studio application for Shiro.",
+  "type": "module",
+  "scripts": {
+    "build": "tsup ./src/index.ts --format esm --dts --clean",
+    "clean": "rimraf dist",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "shiro",
+  "version": "0.0.0",
+  "description": "Command-line interface for Shiro.",
+  "type": "module",
+  "bin": {
+    "shiro": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup ./src/index.ts --format esm --dts --clean",
+    "clean": "rimraf dist",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}

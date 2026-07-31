@@ -1,0 +1,25 @@
+{
+  "name": "@shiro/shared",
+  "version": "0.0.0",
+  "description": "Shared internals for Shiro packages.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup ./src/index.ts --format esm --dts --clean",
+    "clean": "rimraf dist",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}
