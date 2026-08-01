@@ -1,4 +1,5 @@
 import type { EventBus } from "../events/index.js";
+import type { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import type { MemoryProvider } from "../memory/index.js";
 import type { Provider } from "../provider/index.js";
 import type { SessionStore } from "../session/index.js";
@@ -13,6 +14,8 @@ export interface EngineContext {
   readonly provider: Provider;
   readonly tools?: ToolRegistry;
   readonly toolExecutor?: ToolExecutor;
+  readonly agentRegistry?: AgentRegistry;
+  readonly handoffDepthLimiter?: HandoffDepthLimiter;
   readonly sessionStore?: SessionStore;
   readonly memory?: MemoryProvider;
   readonly tracer?: Tracer;

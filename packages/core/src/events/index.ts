@@ -1,6 +1,12 @@
 export { ShiroEventType } from "./events.js";
 export type {
   AgentStartedEvent,
+  AgentHandoffCompletedEvent,
+  AgentHandoffFailedEvent,
+  AgentHandoffRequestedEvent,
+  AgentHandoffStartedEvent,
+  AgentRegisteredEvent,
+  AgentResolvedEvent,
   ApprovalGrantedEvent,
   ApprovalRejectedEvent,
   ApprovalRequestedEvent,

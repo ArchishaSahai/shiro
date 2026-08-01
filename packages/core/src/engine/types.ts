@@ -1,5 +1,6 @@
 import type { Agent, RunResult } from "../agent/index.js";
 import type { EventBus } from "../events/index.js";
+import type { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import type { MemoryProvider } from "../memory/index.js";
 import type { PluginManager, PluginManagerConfig } from "../plugin/index.js";
 import type { Provider, ProviderRegistry, ProviderResolver } from "../provider/index.js";
@@ -25,6 +26,8 @@ export interface EngineServices {
   readonly providerResolver?: ProviderResolver;
   readonly toolRegistry?: ToolRegistry;
   readonly toolExecutor?: ToolExecutor;
+  readonly agentRegistry?: AgentRegistry;
+  readonly handoffDepthLimiter?: HandoffDepthLimiter;
   readonly sessionStore?: SessionStore;
   readonly memory?: MemoryProvider;
   readonly tracer?: Tracer;

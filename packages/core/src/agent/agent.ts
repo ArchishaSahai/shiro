@@ -26,7 +26,7 @@ export interface AgentConfig {
   readonly name: string;
   readonly instructions: string;
   readonly provider: Provider | string;
-  readonly tools?: readonly Tool[];
+  readonly tools?: readonly AgentTool[];
   readonly guardrails?: readonly Guardrail[];
   readonly middleware?: readonly Middleware[];
   readonly memory?: MemoryProvider;
@@ -103,7 +103,7 @@ export class Agent {
   }
 
   /** Tools available to this agent. */
-  get tools(): readonly Tool[] {
+  get tools(): readonly AgentTool[] {
     return this.#config.tools ?? [];
   }
 
@@ -159,3 +159,8 @@ export class Agent {
     return this.#config;
   }
 }
+
+/**
+ * Capabilities available to an agent as callable tools.
+ */
+export type AgentTool = Tool | Agent;

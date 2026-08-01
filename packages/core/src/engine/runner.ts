@@ -1,15 +1,21 @@
-import type { RunResult } from "../agent/index.js";
+import type { Agent, RunResult } from "../agent/index.js";
 import { ConfigurationError, RuntimeError, ShiroError, ShiroErrorCode } from "../errors/index.js";
 import { ShiroEventType, type ShiroEvent } from "../events/index.js";
+import { HandoffDecisionStatus, HandoffManager, type HandoffContext } from "../handoff/index.js";
 import type { ProviderResponse } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import { FinishReason, MessageRole, type Message, type Metadata } from "../shared/index.js";
+import type { JsonObject } from "../shared/index.js";
 import {
   ToolExecutionState,
+  ToolExecutor,
+  ToolRegistry,
+  tool,
   type Tool,
   type ToolCall,
   type ToolContext,
   type ToolResult,
+  type ToolSchema,
 } from "../tool/index.js";
 import { isTerminalRunnerState, PipelineStage, RunnerState } from "./lifecycle.js";
 import type { RunnerDependencies, RunnerSnapshot } from "./types.js";
@@ -24,6 +30,10 @@ const DEFAULT_MAX_ITERATIONS = 8;
  */
 export class Runner {
   readonly #dependencies: RunnerDependencies;
+  #activeAgent: Agent;
+  #handoffManager: HandoffManager | undefined;
+  #toolRegistry: ToolRegistry | undefined;
+  #toolExecutor: ToolExecutor | undefined;
   #state = RunnerState.Created;
   #stage = PipelineStage.Created;
   #messages: readonly Message[] = [];
@@ -32,6 +42,7 @@ export class Runner {
 
   constructor(dependencies: RunnerDependencies) {
     this.#dependencies = Object.freeze({ ...dependencies });
+    this.#activeAgent = dependencies.agent;
   }
 
   /** Unique run identifier. */
@@ -138,9 +149,10 @@ export class Runner {
     this.#setStage(PipelineStage.Initialize);
     this.#throwIfCancelled();
     this.initialize();
+    this.#initializeMultiAgentServices();
     await this.#publish({
       ...this.#baseEvent(ShiroEventType.AgentStarted),
-      agentName: this.#dependencies.agent.name,
+      agentName: this.#activeAgent.name,
     });
   }
 
@@ -177,10 +189,15 @@ export class Runner {
       this.#messages = Object.freeze([...this.#messages, response.message]);
 
       if (response.toolCalls === undefined || response.toolCalls.length === 0) {
+        if (await this.#evaluateHandoff()) {
+          continue;
+        }
+
         return;
       }
 
       await this.#executeToolCalls(response.toolCalls);
+      await this.#evaluateHandoff();
     }
 
     throw new RuntimeError({
@@ -252,10 +269,10 @@ export class Runner {
     });
 
     const request: Partial<MutableProviderRequest> = {
-      instructions: this.#dependencies.agent.instructions,
+      instructions: this.#activeAgent.instructions,
       messages: this.#messages,
     };
-    const tools = this.#shouldAdvertiseTools() ? this.context.engine.tools?.list() : undefined;
+    const tools = this.#shouldAdvertiseTools() ? this.#toolRegistry?.list() : undefined;
 
     if (tools !== undefined && tools.length > 0) {
       request.tools = tools;
@@ -275,7 +292,7 @@ export class Runner {
   }
 
   async #executeToolCalls(toolCalls: readonly ToolCall[]): Promise<void> {
-    const executor = this.context.engine.toolExecutor;
+    const executor = this.#toolExecutor;
 
     if (executor === undefined) {
       throw new RuntimeError({
@@ -337,7 +354,7 @@ export class Runner {
 
   #providerContext(): MutableProviderContext {
     const providerContext: Partial<MutableProviderContext> = {
-      agentName: this.#dependencies.agent.name,
+      agentName: this.#activeAgent.name,
       runId: this.runId,
     };
 
@@ -377,6 +394,132 @@ export class Runner {
   #shouldAdvertiseTools(): boolean {
     const lastMessage = this.#messages.at(-1);
     return lastMessage?.role !== MessageRole.Tool;
+  }
+
+  #initializeMultiAgentServices(): void {
+    if (this.context.engine.agentRegistry !== undefined) {
+      if (!this.context.engine.agentRegistry.has(this.#dependencies.agent.name)) {
+        this.context.engine.agentRegistry.registerAgent(this.#dependencies.agent);
+      }
+      this.#handoffManager = new HandoffManager(
+        this.context.engine.agentRegistry,
+        this.context.engine.handoffDepthLimiter
+      );
+    }
+
+    this.#refreshToolServices();
+  }
+
+  #refreshToolServices(): void {
+    const tools = new ToolRegistry([
+      ...this.#activeAgent.tools.flatMap((entry) => {
+        if (!isAgent(entry)) {
+          return [entry];
+        }
+
+        return this.#activeAgent.handoff === undefined ? [toAgentTool(entry)] : [];
+      }),
+    ]);
+
+    if (tools.list().length > 0) {
+      this.#toolRegistry = tools;
+      this.#toolExecutor = new ToolExecutor(tools);
+    }
+  }
+
+  async #evaluateHandoff(): Promise<boolean> {
+    const agentToolTarget = getAgentToolTarget(this.#messages.at(-1));
+
+    if (agentToolTarget !== undefined) {
+      await this.#handoff(agentToolTarget, "Agent requested as tool.");
+      return true;
+    }
+
+    const manager = this.#handoffManager;
+
+    if (manager === undefined) {
+      return false;
+    }
+
+    const handoffContext: Partial<MutableHandoffContext> = {
+      activeAgent: this.#activeAgent,
+      agentName: this.#activeAgent.name,
+      availableAgents: manager.agents,
+      history: manager.graph.edges,
+      messages: this.#messages,
+      runId: this.runId,
+    };
+
+    if (this.context.metadata !== undefined) {
+      handoffContext.metadata = this.context.metadata;
+    }
+
+    if (this.context.sessionId !== undefined) {
+      handoffContext.sessionId = this.context.sessionId;
+    }
+
+    if (this.context.signal !== undefined) {
+      handoffContext.signal = this.context.signal;
+    }
+
+    const decision = await manager.evaluate(handoffContext as HandoffContext);
+
+    if (decision.status === HandoffDecisionStatus.Handoff && decision.targetAgent !== undefined) {
+      await this.#handoff(decision.targetAgent, decision.reason);
+      return true;
+    }
+
+    return false;
+  }
+
+  async #handoff(targetAgent: string, reason: string | undefined): Promise<void> {
+    const manager = this.#handoffManager;
+
+    if (manager === undefined) {
+      throw new RuntimeError({
+        code: ShiroErrorCode.Runtime,
+        message: "Agent handoff was requested but no agent registry is available.",
+        runId: this.runId,
+      });
+    }
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.AgentHandoffRequested),
+      fromAgent: this.#activeAgent.name,
+      toAgent: targetAgent,
+    });
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.AgentHandoffStarted),
+      fromAgent: this.#activeAgent.name,
+      toAgent: targetAgent,
+    });
+
+    try {
+      const next = manager.handoff(this.#activeAgent, targetAgent, reason);
+      const previous = this.#activeAgent.name;
+      this.#activeAgent = next;
+      this.#refreshToolServices();
+      this.#messages = Object.freeze([
+        ...this.#messages,
+        Object.freeze({
+          content: `Execution handed off from ${previous} to ${next.name}.`,
+          role: MessageRole.System,
+        }),
+      ]);
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.AgentHandoffCompleted),
+        fromAgent: previous,
+        toAgent: next.name,
+      });
+    } catch (error) {
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.AgentHandoffFailed),
+        error: toShiroError(error),
+        fromAgent: this.#activeAgent.name,
+        toAgent: targetAgent,
+      });
+      throw error;
+    }
   }
 
   #baseEvent<TType extends ShiroEventType>(type: TType): BaseRunnerEvent<TType> {
@@ -448,6 +591,10 @@ type MutableToolContext = {
   -readonly [Key in keyof ToolContext]: ToolContext[Key];
 };
 
+type MutableHandoffContext = {
+  -readonly [Key in keyof HandoffContext]: HandoffContext[Key];
+};
+
 function toUserMessage(input: RunnerDependencies["input"]): Message {
   if (typeof input !== "string") {
     return input;
@@ -487,6 +634,80 @@ function toShiroError(error: unknown): ShiroError {
     code: ShiroErrorCode.Runtime,
     message: "Runner execution failed.",
   });
+}
+
+function getAgentToolTarget(message: Message | undefined): string | undefined {
+  if (message?.role !== MessageRole.Tool) {
+    return undefined;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(message.content);
+
+    if (!isRecord(parsed)) {
+      return undefined;
+    }
+
+    return parsed.type === "agent_handoff" && typeof parsed.targetAgent === "string"
+      ? parsed.targetAgent
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+interface AgentToolInput extends JsonObject {
+  readonly input?: string;
+}
+
+const agentToolSchema: ToolSchema<AgentToolInput> = Object.freeze({
+  parse(input: unknown): AgentToolInput {
+    if (!isRecord(input)) {
+      return Object.freeze({});
+    }
+
+    return typeof input.input === "string"
+      ? Object.freeze({ input: input.input })
+      : Object.freeze({});
+  },
+  toJSONSchema(): JsonObject {
+    return Object.freeze({
+      additionalProperties: false,
+      properties: Object.freeze({
+        input: Object.freeze({
+          description: "Optional task or context for the target agent.",
+          type: "string",
+        }),
+      }),
+      type: "object",
+    });
+  },
+});
+
+function toAgentTool(agent: Agent): Tool<AgentToolInput> {
+  return tool({
+    description: `Hand off execution to the ${agent.name} agent.`,
+    execute: async (input) => {
+      await Promise.resolve();
+      return Object.freeze({
+        input: input.input ?? "",
+        targetAgent: agent.name,
+        type: "agent_handoff",
+      });
+    },
+    name: agent.name,
+    parameters: agentToolSchema,
+  });
+}
+
+function isAgent(value: unknown): value is Agent {
+  return (
+    value instanceof Object && "name" in value && "instructions" in value && "provider" in value
+  );
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null;
 }
 
 function throwInvalidTransition(from: RunnerState, to: RunnerState): never {

@@ -1,5 +1,6 @@
 import type { Agent, RunOptions, RunResult } from "../agent/index.js";
 import { ConfigurationError, ShiroErrorCode } from "../errors/index.js";
+import { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import { PluginManager, type Plugin } from "../plugin/index.js";
 import { ProviderRegistry, RegistryProviderResolver } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
@@ -28,6 +29,8 @@ export class Engine {
   readonly #services: EngineServices;
   readonly #providerRegistry: ProviderRegistry;
   readonly #toolRegistry: ToolRegistry;
+  readonly #agentRegistry: AgentRegistry;
+  readonly #handoffDepthLimiter: HandoffDepthLimiter;
   readonly #pluginManager: PluginManager;
   readonly #contextFactory: EngineContextFactory;
   #state = EngineState.Created;
@@ -36,10 +39,17 @@ export class Engine {
     this.#id = config.id ?? createId("engine");
     this.#providerRegistry = config.providerRegistry ?? new ProviderRegistry();
     this.#toolRegistry = config.toolRegistry ?? new ToolRegistry();
+    this.#agentRegistry = config.agentRegistry ?? new AgentRegistry();
+    this.#handoffDepthLimiter = config.handoffDepthLimiter ?? new HandoffDepthLimiter();
     this.#pluginManager =
       config.pluginManager ??
       new PluginManager(this.#providerRegistry, config.plugins, this.#toolRegistry);
-    this.#services = freezeServices({ ...config, toolRegistry: this.#toolRegistry });
+    this.#services = freezeServices({
+      ...config,
+      agentRegistry: this.#agentRegistry,
+      handoffDepthLimiter: this.#handoffDepthLimiter,
+      toolRegistry: this.#toolRegistry,
+    });
     this.#contextFactory = new DefaultEngineContextFactory(
       this.#services,
       config.providerResolver ?? new RegistryProviderResolver(this.#providerRegistry)
@@ -64,6 +74,22 @@ export class Engine {
   /** Tool registry owned by this engine. */
   get toolRegistry(): ToolRegistry {
     return this.#toolRegistry;
+  }
+
+  /** Agent registry owned by this engine. */
+  get agentRegistry(): AgentRegistry {
+    return this.#agentRegistry;
+  }
+
+  /** Registers an agent for multi-agent orchestration. */
+  registerAgent(agent: Agent): this {
+    this.#agentRegistry.registerAgent(agent);
+    return this;
+  }
+
+  /** Removes an agent from multi-agent orchestration. */
+  unregisterAgent(name: string): boolean {
+    return this.#agentRegistry.unregisterAgent(name);
   }
 
   /** Plugin manager owned by this engine. */
@@ -219,6 +245,14 @@ function freezeServices(config: EngineConfig): EngineServices {
 
   if (config.toolExecutor !== undefined) {
     services.toolExecutor = config.toolExecutor;
+  }
+
+  if (config.agentRegistry !== undefined) {
+    services.agentRegistry = config.agentRegistry;
+  }
+
+  if (config.handoffDepthLimiter !== undefined) {
+    services.handoffDepthLimiter = config.handoffDepthLimiter;
   }
 
   if (config.sessionStore !== undefined) {

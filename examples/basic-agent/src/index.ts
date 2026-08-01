@@ -1,7 +1,19 @@
 import { config as loadEnv } from "dotenv";
 import { fileURLToPath } from "node:url";
 
-import { Agent, Engine, tool, type JsonObject, type ToolSchema } from "@shiro/core";
+import {
+  Agent,
+  Engine,
+  SequentialHandoffStrategy,
+  ShiroEventType,
+  tool,
+  type Disposable,
+  type EventBus,
+  type EventHandler,
+  type JsonObject,
+  type ShiroEvent,
+  type ToolSchema,
+} from "@shiro/core";
 import { OpenAIPlugin } from "@shiro/openai";
 
 loadEnv({
@@ -14,7 +26,34 @@ if (apiKey === undefined || apiKey.trim().length === 0) {
   throw new Error("OPENAI_API_KEY is required to run the basic agent example.");
 }
 
-const engine = new Engine();
+class ConsoleEventBus implements EventBus {
+  async publish(event: ShiroEvent): Promise<void> {
+    await Promise.resolve();
+
+    if (event.type === ShiroEventType.AgentHandoffCompleted) {
+      console.log(`handoff: ${event.fromAgent} -> ${event.toAgent}`);
+    }
+
+    if (event.type === ShiroEventType.ToolCompleted) {
+      console.log(`tool: ${event.result.name}`);
+    }
+  }
+
+  subscribe<TType extends ShiroEventType>(type: TType, handler: EventHandler<TType>): Disposable {
+    void type;
+    void handler;
+
+    return Object.freeze({
+      dispose(): void {
+        void type;
+      },
+    });
+  }
+}
+
+const engine = new Engine({
+  events: new ConsoleEventBus(),
+});
 
 engine.use(
   new OpenAIPlugin({
@@ -66,16 +105,36 @@ const weatherTool = tool({
   parameters: weatherSchema,
 });
 
-const agent = new Agent({
-  instructions: "You are a helpful AI assistant.",
-  name: "Assistant",
+const researchAgent = new Agent({
+  handoff: new SequentialHandoffStrategy(["Manager"]),
+  instructions:
+    "You are a research agent. Use available tools to collect factual context, then summarize the result briefly.",
+  name: "Research",
   provider: "openai",
   tools: [weatherTool],
 });
 
+const securityAgent = new Agent({
+  handoff: new SequentialHandoffStrategy(["Manager"]),
+  instructions:
+    "You are a security review agent. Review the prior messages for obvious safety or reliability concerns, then respond briefly.",
+  name: "Security",
+  provider: "openai",
+});
+
+const agent = new Agent({
+  handoff: new SequentialHandoffStrategy(["Research", "Security"]),
+  instructions:
+    "You are the manager agent. Coordinate specialist agents when needed and produce the final response when their work is complete.",
+  name: "Manager",
+  provider: "openai",
+  tools: [researchAgent, securityAgent],
+});
+
 const result = await engine.execute(
   agent,
-  "What is the weather in Pune today? Use the weather tool before answering."
+  "Find today's weather in Pune, have the security agent review the result, then give a final concise answer.",
+  { maxIterations: 12 }
 );
 
 console.log(result.output);

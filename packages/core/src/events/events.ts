@@ -7,6 +7,12 @@ import type { ToolCallRequest, ToolCallResult } from "../tool/index.js";
  */
 export enum ShiroEventType {
   AgentStarted = "agent.started",
+  AgentRegistered = "agent.registered",
+  AgentResolved = "agent.resolved",
+  AgentHandoffRequested = "agent.handoff.requested",
+  AgentHandoffStarted = "agent.handoff.started",
+  AgentHandoffCompleted = "agent.handoff.completed",
+  AgentHandoffFailed = "agent.handoff.failed",
   RunStarted = "run.started",
   ProviderStarted = "provider.started",
   ProviderFinished = "provider.finished",
@@ -42,6 +48,41 @@ export interface BaseShiroEvent {
 export interface AgentStartedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.AgentStarted;
   readonly agentName: string;
+}
+
+export interface AgentRegisteredEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.AgentRegistered;
+  readonly agentName: string;
+}
+
+export interface AgentResolvedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.AgentResolved;
+  readonly agentName: string;
+}
+
+export interface AgentHandoffRequestedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.AgentHandoffRequested;
+  readonly fromAgent: string;
+  readonly toAgent: string;
+}
+
+export interface AgentHandoffStartedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.AgentHandoffStarted;
+  readonly fromAgent: string;
+  readonly toAgent: string;
+}
+
+export interface AgentHandoffCompletedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.AgentHandoffCompleted;
+  readonly fromAgent: string;
+  readonly toAgent: string;
+}
+
+export interface AgentHandoffFailedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.AgentHandoffFailed;
+  readonly fromAgent: string;
+  readonly toAgent: string;
+  readonly error: ShiroError;
 }
 
 export interface RunStartedEvent extends BaseShiroEvent {
@@ -148,6 +189,12 @@ export interface RunFailedEvent extends BaseShiroEvent {
  */
 export type ShiroEvent =
   | AgentStartedEvent
+  | AgentRegisteredEvent
+  | AgentResolvedEvent
+  | AgentHandoffRequestedEvent
+  | AgentHandoffStartedEvent
+  | AgentHandoffCompletedEvent
+  | AgentHandoffFailedEvent
   | RunStartedEvent
   | ProviderStartedEvent
   | ProviderFinishedEvent

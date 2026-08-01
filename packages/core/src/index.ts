@@ -1,5 +1,5 @@
 export { Agent, AgentBuilder } from "./agent/index.js";
-export type { AgentConfig, AgentOptions, RunOptions, RunResult } from "./agent/index.js";
+export type { AgentConfig, AgentOptions, AgentTool, RunOptions, RunResult } from "./agent/index.js";
 export type {
   ApprovalContext,
   ApprovalDecision,
@@ -42,6 +42,12 @@ export type { ShiroErrorDetails } from "./errors/index.js";
 export { ShiroEventType } from "./events/index.js";
 export type {
   AgentStartedEvent,
+  AgentHandoffCompletedEvent,
+  AgentHandoffFailedEvent,
+  AgentHandoffRequestedEvent,
+  AgentHandoffStartedEvent,
+  AgentRegisteredEvent,
+  AgentResolvedEvent,
   ApprovalGrantedEvent,
   ApprovalRejectedEvent,
   ApprovalRequestedEvent,
@@ -71,8 +77,22 @@ export type {
 } from "./events/index.js";
 export { GuardrailDecision, GuardrailStage } from "./guardrails/index.js";
 export type { Guardrail, GuardrailContext, GuardrailResult } from "./guardrails/index.js";
-export { HandoffDecisionStatus } from "./handoff/index.js";
-export type { HandoffContext, HandoffDecision, HandoffStrategy } from "./handoff/index.js";
+export {
+  AgentExecutionGraph,
+  AgentRegistry,
+  HandoffDecisionStatus,
+  HandoffDepthLimiter,
+  HandoffManager,
+  HandoffStrategyType,
+  SequentialHandoffStrategy,
+} from "./handoff/index.js";
+export type {
+  AgentResolver,
+  HandoffContext,
+  HandoffDecision,
+  HandoffResult,
+  HandoffStrategy,
+} from "./handoff/index.js";
 export type {
   MemoryProvider,
   MemoryReadContext,

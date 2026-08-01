@@ -2,7 +2,8 @@ import type { Agent } from "../agent/index.js";
 import type { ProviderResolver } from "../provider/index.js";
 import type { EngineContext } from "../runtime/index.js";
 import type { JsonValue } from "../shared/index.js";
-import { ToolExecutor, ToolRegistry } from "../tool/index.js";
+import { tool, ToolExecutor, ToolRegistry, type Tool, type ToolSchema } from "../tool/index.js";
+import type { JsonObject } from "../shared/index.js";
 import type { EngineServices, RunnerOptions } from "./types.js";
 
 /**
@@ -28,12 +29,30 @@ export class DefaultEngineContextFactory {
     };
     const tools = new ToolRegistry([
       ...(this.#services.toolRegistry?.list() ?? []),
-      ...agent.tools,
+      ...agent.tools.map((entry) => {
+        if (!isAgent(entry)) {
+          return entry;
+        }
+
+        if (this.#services.agentRegistry?.has(entry.name) !== true) {
+          this.#services.agentRegistry?.registerAgent(entry);
+        }
+
+        return toAgentTool(entry);
+      }),
     ]);
 
     if (tools.list().length > 0) {
       context.tools = tools;
       context.toolExecutor = this.#services.toolExecutor ?? new ToolExecutor(tools);
+    }
+
+    if (this.#services.agentRegistry !== undefined) {
+      context.agentRegistry = this.#services.agentRegistry;
+    }
+
+    if (this.#services.handoffDepthLimiter !== undefined) {
+      context.handoffDepthLimiter = this.#services.handoffDepthLimiter;
     }
 
     const sessionStore = agent.sessionStore ?? this.#services.sessionStore;
@@ -62,6 +81,57 @@ export class DefaultEngineContextFactory {
 
     return Object.freeze(context) as EngineContext;
   }
+}
+
+interface AgentToolInput extends JsonObject {
+  readonly input?: string;
+}
+
+const agentToolSchema: ToolSchema<AgentToolInput> = Object.freeze({
+  parse(input: unknown): AgentToolInput {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      return Object.freeze({});
+    }
+
+    const value = input as Readonly<Record<string, unknown>>;
+    return typeof value.input === "string"
+      ? Object.freeze({ input: value.input })
+      : Object.freeze({});
+  },
+  toJSONSchema(): JsonObject {
+    return Object.freeze({
+      additionalProperties: false,
+      properties: Object.freeze({
+        input: Object.freeze({
+          description: "Optional task or context for the target agent.",
+          type: "string",
+        }),
+      }),
+      type: "object",
+    });
+  },
+});
+
+function toAgentTool(agent: Agent): Tool<AgentToolInput> {
+  return tool({
+    description: `Hand off execution to the ${agent.name} agent.`,
+    execute: async (input) => {
+      await Promise.resolve();
+      return Object.freeze({
+        input: input.input ?? "",
+        targetAgent: agent.name,
+        type: "agent_handoff",
+      });
+    },
+    name: agent.name,
+    parameters: agentToolSchema,
+  });
+}
+
+function isAgent(value: unknown): value is Agent {
+  return (
+    value instanceof Object && "instructions" in value && "provider" in value && "tools" in value
+  );
 }
 
 type MutableEngineContext = {

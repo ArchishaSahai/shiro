@@ -7,9 +7,8 @@ import type { Middleware } from "../middleware/index.js";
 import type { Provider } from "../provider/index.js";
 import type { SessionStore } from "../session/index.js";
 import type { Metadata } from "../shared/index.js";
-import type { Tool } from "../tool/index.js";
 import type { Tracer } from "../tracing/index.js";
-import { Agent, type AgentConfig } from "./agent.js";
+import { Agent, type AgentConfig, type AgentTool } from "./agent.js";
 import { validateAgentConfig } from "./validation.js";
 
 type MutableAgentConfig = {
@@ -23,7 +22,7 @@ export class AgentBuilder {
   #name: string | undefined;
   #instructions: string | undefined;
   #provider: Provider | string | undefined;
-  #tools: Tool[] = [];
+  #tools: AgentTool[] = [];
   #guardrails: Guardrail[] = [];
   #middleware: Middleware[] = [];
   #memory: MemoryProvider | undefined;
@@ -53,13 +52,13 @@ export class AgentBuilder {
   }
 
   /** Replaces the full tool list for this agent. */
-  tools(tools: readonly Tool[]): this {
+  tools(tools: readonly AgentTool[]): this {
     this.#tools = [...tools];
     return this;
   }
 
   /** Adds one tool to this agent. */
-  tool(tool: Tool): this {
+  tool(tool: AgentTool): this {
     this.#tools.push(tool);
     return this;
   }
