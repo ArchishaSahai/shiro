@@ -259,12 +259,24 @@ function freezeServices(config: EngineConfig): EngineServices {
     services.handoffDepthLimiter = config.handoffDepthLimiter;
   }
 
+  if (config.sessionManager !== undefined) {
+    services.sessionManager = config.sessionManager;
+  }
+
   if (config.sessionStore !== undefined) {
     services.sessionStore = config.sessionStore;
   }
 
+  if (config.memoryManager !== undefined) {
+    services.memoryManager = config.memoryManager;
+  }
+
   if (config.memory !== undefined) {
     services.memory = config.memory;
+  }
+
+  if (config.contextCompactor !== undefined) {
+    services.contextCompactor = config.contextCompactor;
   }
 
   if (config.tracer !== undefined) {

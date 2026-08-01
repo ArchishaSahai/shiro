@@ -78,6 +78,10 @@ export type {
   HandoffCompletedEvent,
   HandoffRequestedEvent,
   MemoryReadEvent,
+  ContextPreparedEvent,
+  MemoryCompactedEvent,
+  MemoryRetrievedEvent,
+  MemoryStoredEvent,
   MemoryUpdatedEvent,
   ProviderFinishedEvent,
   ProviderStartedEvent,
@@ -85,6 +89,9 @@ export type {
   RunFailedEvent,
   RunStartedEvent,
   ShiroEvent,
+  SessionCreatedEvent,
+  SessionLoadedEvent,
+  SessionUpdatedEvent,
   ToolFinishedEvent,
   ToolCompletedEvent,
   ToolFailedEvent,
@@ -110,10 +117,23 @@ export type {
   HandoffResult,
   HandoffStrategy,
 } from "./handoff/index.js";
+export {
+  DefaultContextCompactor,
+  DefaultMemoryRetrievalStrategy,
+  InMemoryMemoryProvider,
+  MemoryManager,
+} from "./memory/index.js";
 export type {
+  ContextCompactionOptions,
+  ContextCompactor,
+  ConversationContext,
+  MemoryEntry,
   MemoryProvider,
   MemoryReadContext,
   MemoryRecord,
+  MemoryRetrievalStrategy,
+  MemorySearchQuery,
+  MemorySnapshot,
   MemoryWriteContext,
 } from "./memory/index.js";
 export type { Middleware, MiddlewareContext, MiddlewareRunResult } from "./middleware/index.js";
@@ -155,7 +175,14 @@ export type {
   ProviderResponse,
 } from "./provider/index.js";
 export type { EngineContext, RunContext, RuntimeContext } from "./runtime/index.js";
-export type { Session, SessionSnapshot, SessionStore } from "./session/index.js";
+export { createSessionSnapshot, InMemorySessionStore, SessionManager } from "./session/index.js";
+export type {
+  ConversationState,
+  Session,
+  SessionExecutionStats,
+  SessionSnapshot,
+  SessionStore,
+} from "./session/index.js";
 export { FinishReason, MessageRole } from "./shared/index.js";
 export type {
   CancellationOptions,

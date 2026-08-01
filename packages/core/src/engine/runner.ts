@@ -3,8 +3,15 @@ import { ApprovalDecisionStatus, type ApprovalContext } from "../approval/index.
 import { ConfigurationError, RuntimeError, ShiroError, ShiroErrorCode } from "../errors/index.js";
 import { ShiroEventType, type ShiroEvent } from "../events/index.js";
 import { HandoffDecisionStatus, HandoffManager, type HandoffContext } from "../handoff/index.js";
+import type {
+  MemoryEntry,
+  MemoryReadContext,
+  MemoryRecord,
+  MemoryWriteContext,
+} from "../memory/index.js";
 import type { ProviderResponse } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
+import { createSessionSnapshot, type SessionSnapshot } from "../session/index.js";
 import { FinishReason, MessageRole, type Message, type Metadata } from "../shared/index.js";
 import type { JsonObject } from "../shared/index.js";
 import {
@@ -40,6 +47,8 @@ export class Runner {
   #state = RunnerState.Created;
   #stage = PipelineStage.Created;
   #messages: readonly Message[] = [];
+  #session: SessionSnapshot | null = null;
+  #memory: readonly MemoryEntry[] = [];
   #providerResponse: ProviderResponse | undefined;
   #iteration = 0;
 
@@ -78,7 +87,7 @@ export class Runner {
       await this.#initializeStage();
       await this.#validateStage();
       this.#resolveProviderStage();
-      this.#prepareMessagesStage();
+      await this.#prepareMessagesStage();
       await this.#executeProviderStage();
       this.#processResultStage();
       return await this.#finalizeStage();
@@ -174,10 +183,30 @@ export class Runner {
     this.#throwIfCancelled();
   }
 
-  #prepareMessagesStage(): void {
+  async #prepareMessagesStage(): Promise<void> {
     this.#setStage(PipelineStage.PrepareMessages);
     this.#throwIfCancelled();
-    this.#messages = Object.freeze([toUserMessage(this.#dependencies.input)]);
+    const history = await this.#loadSessionHistory();
+    this.#memory = await this.#retrieveMemory();
+    const memoryMessages = this.#memory.map((entry) => toMemoryMessage(entry));
+    const context = await this.context.engine.contextCompactor?.compact([
+      ...history,
+      ...memoryMessages,
+      toUserMessage(this.#dependencies.input),
+    ]);
+    this.#messages = Object.freeze(context?.messages ?? [toUserMessage(this.#dependencies.input)]);
+
+    if (context?.compacted === true) {
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.MemoryCompacted),
+        messageCount: this.#messages.length,
+      });
+    }
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.ContextPrepared),
+      messageCount: this.#messages.length,
+    });
   }
 
   async #executeProviderStage(): Promise<void> {
@@ -221,6 +250,8 @@ export class Runner {
     this.complete();
 
     const result = this.#createResult(FinishReason.Completed);
+    await this.#persistSession();
+    await this.#persistMemory();
 
     await this.#publish({
       ...this.#baseEvent(ShiroEventType.RunCompleted),
@@ -261,6 +292,135 @@ export class Runner {
     await this.#publish({
       ...this.#baseEvent(ShiroEventType.RunFailed),
       error,
+    });
+  }
+
+  async #loadSessionHistory(): Promise<readonly Message[]> {
+    const sessionManager = this.context.engine.sessionManager;
+
+    if (sessionManager === undefined) {
+      return Object.freeze([]);
+    }
+
+    if (this.context.sessionId === undefined) {
+      this.#session = await sessionManager.createSession(this.context.metadata);
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.SessionCreated),
+        sessionId: this.#session.sessionId,
+      });
+      return Object.freeze([]);
+    }
+
+    this.#session = await sessionManager.getSession(this.context.sessionId);
+
+    if (this.#session === null) {
+      this.#session = await sessionManager.updateSession(
+        createSessionSnapshot(
+          this.context.sessionId,
+          [],
+          this.#activeAgent.name,
+          null,
+          this.context.metadata
+        )
+      );
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.SessionCreated),
+        sessionId: this.#session.sessionId,
+      });
+      return Object.freeze([]);
+    }
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.SessionLoaded),
+      sessionId: this.#session.sessionId,
+    });
+    return this.#session.messages;
+  }
+
+  async #retrieveMemory(): Promise<readonly MemoryEntry[]> {
+    const memoryManager = this.context.engine.memoryManager;
+
+    if (memoryManager === undefined) {
+      return Object.freeze([]);
+    }
+
+    const readContext: Partial<MutableMemoryReadContext> = {
+      input: this.#dependencies.input,
+      runId: this.runId,
+    };
+    const sessionId = this.#session?.sessionId ?? this.context.sessionId;
+
+    if (sessionId !== undefined) {
+      readContext.sessionId = sessionId;
+    }
+
+    if (this.context.metadata !== undefined) {
+      readContext.metadata = this.context.metadata;
+    }
+
+    const entries = await memoryManager.retrieve(readContext as MutableMemoryReadContext);
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.MemoryRetrieved),
+      recordCount: entries.length,
+    });
+    return entries;
+  }
+
+  async #persistSession(): Promise<void> {
+    const sessionManager = this.context.engine.sessionManager;
+    const sessionId = this.#session?.sessionId ?? this.context.sessionId;
+
+    if (sessionManager === undefined || sessionId === undefined) {
+      return;
+    }
+
+    this.#session = await sessionManager.updateSession(
+      createSessionSnapshot(
+        sessionId,
+        this.#messages,
+        this.#activeAgent.name,
+        this.#session,
+        this.context.metadata
+      )
+    );
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.SessionUpdated),
+      sessionId,
+    });
+  }
+
+  async #persistMemory(): Promise<void> {
+    const memoryManager = this.context.engine.memoryManager;
+
+    if (memoryManager === undefined || this.#providerResponse === undefined) {
+      return;
+    }
+
+    const record: Partial<MutableMemoryRecord> = {
+      content: this.#providerResponse.message.content,
+    };
+    const writeContext: Partial<MutableMemoryWriteContext> = {
+      runId: this.runId,
+    };
+    const sessionId = this.#session?.sessionId ?? this.context.sessionId;
+
+    if (this.context.metadata !== undefined) {
+      record.metadata = this.context.metadata;
+      writeContext.metadata = this.context.metadata;
+    }
+
+    if (sessionId !== undefined) {
+      writeContext.sessionId = sessionId;
+    }
+
+    await memoryManager.store(
+      record as MutableMemoryRecord,
+      writeContext as MutableMemoryWriteContext
+    );
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.MemoryStored),
+      recordCount: 1,
     });
   }
 
@@ -701,6 +861,18 @@ type MutableApprovalContext = {
   -readonly [Key in keyof ApprovalContext]: ApprovalContext[Key];
 };
 
+type MutableMemoryReadContext = {
+  -readonly [Key in keyof MemoryReadContext]: MemoryReadContext[Key];
+};
+
+type MutableMemoryWriteContext = {
+  -readonly [Key in keyof MemoryWriteContext]: MemoryWriteContext[Key];
+};
+
+type MutableMemoryRecord = {
+  -readonly [Key in keyof MemoryRecord]: MemoryRecord[Key];
+};
+
 interface MutableApprovalDeniedEvent {
   type:
     | ShiroEventType.ApprovalRejected
@@ -741,6 +913,23 @@ function toToolMessage(result: ToolResult): Message {
     role: MessageRole.Tool,
   });
 }
+
+function toMemoryMessage(entry: MemoryEntry): Message {
+  const message: Partial<MutableMessage> = {
+    content: `Relevant memory: ${entry.content}`,
+    role: MessageRole.System,
+  };
+
+  if (entry.metadata !== undefined) {
+    message.metadata = entry.metadata;
+  }
+
+  return Object.freeze(message) as Message;
+}
+
+type MutableMessage = {
+  -readonly [Key in keyof Message]: Message[Key];
+};
 
 function toShiroError(error: unknown): ShiroError {
   if (error instanceof ShiroError) {

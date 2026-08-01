@@ -3,18 +3,16 @@ import { fileURLToPath } from "node:url";
 
 import {
   Agent,
-  ApprovalDecisionStatus,
-  ApprovalManager,
   Engine,
-  LocalApprovalProvider,
+  InMemoryMemoryProvider,
+  InMemorySessionStore,
+  MemoryManager,
+  SessionManager,
   ShiroEventType,
-  tool,
   type Disposable,
   type EventBus,
   type EventHandler,
-  type JsonObject,
   type ShiroEvent,
-  type ToolSchema,
 } from "@shiro/core";
 import { OpenAIPlugin } from "@shiro/openai";
 
@@ -32,25 +30,32 @@ class ConsoleEventBus implements EventBus {
   async publish(event: ShiroEvent): Promise<void> {
     await Promise.resolve();
 
-    if (event.type === ShiroEventType.AgentHandoffCompleted) {
-      console.log(`handoff: ${event.fromAgent} -> ${event.toAgent}`);
+    if (event.type === ShiroEventType.SessionCreated) {
+      console.log(`session created: ${event.sessionId}`);
     }
 
-    if (event.type === ShiroEventType.ToolCompleted) {
-      console.log(`tool: ${event.result.name}`);
+    if (event.type === ShiroEventType.SessionLoaded) {
+      console.log(`session loaded: ${event.sessionId}`);
     }
 
-    if (event.type === ShiroEventType.ApprovalRequested) {
-      console.log(`approval requested: ${event.toolCall.name}`);
+    if (event.type === ShiroEventType.SessionUpdated) {
+      console.log(`session updated: ${event.sessionId}`);
     }
 
-    if (event.type === ShiroEventType.ApprovalGranted) {
-      console.log(`approval granted: ${event.toolCall.name}`);
+    if (event.type === ShiroEventType.MemoryRetrieved) {
+      console.log(`memory retrieved: ${String(event.recordCount)}`);
+    }
+
+    if (event.type === ShiroEventType.MemoryStored) {
+      console.log(`memory stored: ${String(event.recordCount)}`);
+    }
+
+    if (event.type === ShiroEventType.ContextPrepared) {
+      console.log(`context prepared: ${String(event.messageCount)} messages`);
     }
   }
 
   subscribe<TType extends ShiroEventType>(type: TType, handler: EventHandler<TType>): Disposable {
-    void type;
     void handler;
 
     return Object.freeze({
@@ -61,11 +66,14 @@ class ConsoleEventBus implements EventBus {
   }
 }
 
+const sessionManager = new SessionManager(new InMemorySessionStore());
+const memoryManager = new MemoryManager(new InMemoryMemoryProvider());
+const session = await sessionManager.createSession();
+
 const engine = new Engine({
-  approvalManager: new ApprovalManager({
-    provider: new LocalApprovalProvider(ApprovalDecisionStatus.Granted),
-  }),
   events: new ConsoleEventBus(),
+  memoryManager,
+  sessionManager,
 });
 
 engine.use(
@@ -75,66 +83,23 @@ engine.use(
   })
 );
 
-interface SensitiveInput extends JsonObject {
-  readonly action: string;
-}
-
-const sensitiveSchema: ToolSchema<SensitiveInput> = {
-  parse(input: unknown): SensitiveInput {
-    if (!isObject(input) || typeof input.action !== "string") {
-      throw new Error("action is required.");
-    }
-
-    return Object.freeze({
-      action: input.action,
-    });
-  },
-  toJSONSchema(): JsonObject {
-    return Object.freeze({
-      additionalProperties: false,
-      properties: Object.freeze({
-        action: Object.freeze({
-          description: "Sensitive action to perform after human approval.",
-          type: "string",
-        }),
-      }),
-      required: Object.freeze(["action"]),
-      type: "object",
-    });
-  },
-};
-
-const sensitiveTool = tool({
-  approvalDescription: "Approves a sensitive deployment-style operation.",
-  description: "Performs a sensitive operation that requires human approval.",
-  execute: async ({ action }) => {
-    await Promise.resolve();
-    return Object.freeze({
-      action,
-      status: "completed",
-    });
-  },
-  name: "sensitive_operation",
-  parameters: sensitiveSchema,
-  requiresApproval: true,
-});
-
 const agent = new Agent({
   instructions:
-    "You are the manager agent. Use the sensitive_operation tool when asked to perform a sensitive action, then report the result.",
-  name: "Manager",
+    "You are a concise assistant. Use the conversation history and relevant memory when answering.",
+  name: "Assistant",
   provider: "openai",
-  tools: [sensitiveTool],
 });
 
-const result = await engine.execute(
+const first = await engine.execute(
   agent,
-  "Perform the sensitive action named rotate-demo-secret. Use the tool before answering.",
-  { maxIterations: 6 }
+  "Remember that my Shiro project codename is Sakura. Reply with one short acknowledgement.",
+  { sessionId: session.sessionId }
 );
 
-console.log(result.output);
+console.log(`first: ${first.output}`);
 
-function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null;
-}
+const second = await engine.execute(agent, "What is my Shiro project codename?", {
+  sessionId: session.sessionId,
+});
+
+console.log(`second: ${second.output}`);

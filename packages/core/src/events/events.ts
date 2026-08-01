@@ -31,6 +31,13 @@ export enum ShiroEventType {
   GuardrailViolated = "guardrail.violated",
   MemoryRead = "memory.read",
   MemoryUpdated = "memory.updated",
+  SessionCreated = "session.created",
+  SessionLoaded = "session.loaded",
+  SessionUpdated = "session.updated",
+  MemoryStored = "memory.stored",
+  MemoryRetrieved = "memory.retrieved",
+  MemoryCompacted = "memory.compacted",
+  ContextPrepared = "context.prepared",
   HandoffRequested = "handoff.requested",
   HandoffCompleted = "handoff.completed",
   RunCompleted = "run.completed",
@@ -181,6 +188,41 @@ export interface MemoryUpdatedEvent extends BaseShiroEvent {
   readonly recordCount: number;
 }
 
+export interface SessionCreatedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.SessionCreated;
+  readonly sessionId: string;
+}
+
+export interface SessionLoadedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.SessionLoaded;
+  readonly sessionId: string;
+}
+
+export interface SessionUpdatedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.SessionUpdated;
+  readonly sessionId: string;
+}
+
+export interface MemoryStoredEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.MemoryStored;
+  readonly recordCount: number;
+}
+
+export interface MemoryRetrievedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.MemoryRetrieved;
+  readonly recordCount: number;
+}
+
+export interface MemoryCompactedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.MemoryCompacted;
+  readonly messageCount: number;
+}
+
+export interface ContextPreparedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ContextPrepared;
+  readonly messageCount: number;
+}
+
 export interface HandoffRequestedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.HandoffRequested;
   readonly targetAgent?: string;
@@ -229,6 +271,13 @@ export type ShiroEvent =
   | GuardrailViolatedEvent
   | MemoryReadEvent
   | MemoryUpdatedEvent
+  | SessionCreatedEvent
+  | SessionLoadedEvent
+  | SessionUpdatedEvent
+  | MemoryStoredEvent
+  | MemoryRetrievedEvent
+  | MemoryCompactedEvent
+  | ContextPreparedEvent
   | HandoffRequestedEvent
   | HandoffCompletedEvent
   | RunCompletedEvent

@@ -1,6 +1,8 @@
 import type { Agent } from "../agent/index.js";
+import { DefaultContextCompactor, MemoryManager } from "../memory/index.js";
 import type { ProviderResolver } from "../provider/index.js";
 import type { EngineContext } from "../runtime/index.js";
+import { SessionManager } from "../session/index.js";
 import type { JsonValue } from "../shared/index.js";
 import { tool, ToolExecutor, ToolRegistry, type Tool, type ToolSchema } from "../tool/index.js";
 import type { JsonObject } from "../shared/index.js";
@@ -60,14 +62,32 @@ export class DefaultEngineContextFactory {
     }
 
     const sessionStore = agent.sessionStore ?? this.#services.sessionStore;
+    const sessionManager =
+      this.#services.sessionManager ??
+      (sessionStore === undefined ? undefined : new SessionManager(sessionStore));
+
+    if (sessionManager !== undefined) {
+      context.sessionManager = sessionManager;
+    }
+
     if (sessionStore !== undefined) {
       context.sessionStore = sessionStore;
     }
 
     const memory = agent.memory ?? this.#services.memory;
+    const memoryManager =
+      this.#services.memoryManager ??
+      (memory === undefined ? undefined : new MemoryManager(memory));
+
+    if (memoryManager !== undefined) {
+      context.memoryManager = memoryManager;
+    }
+
     if (memory !== undefined) {
       context.memory = memory;
     }
+
+    context.contextCompactor = this.#services.contextCompactor ?? new DefaultContextCompactor();
 
     const tracer = agent.tracer ?? this.#services.tracer;
     if (tracer !== undefined) {
