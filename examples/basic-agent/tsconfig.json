@@ -3,7 +3,9 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
   },
+  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/openai" }],
   "include": ["src"]
 }

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
     "declaration": true,
     "declarationMap": true,
     "esModuleInterop": true,
@@ -22,6 +23,10 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2023",
+    "paths": {
+      "@shiro/core": ["./packages/core/src/index.ts"],
+      "@shiro/openai": ["./packages/openai/src/index.ts"]
+    },
     "verbatimModuleSyntax": true
   }
 }

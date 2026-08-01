@@ -1,0 +1,29 @@
+{
+  "name": "@shiro/openai",
+  "version": "0.0.0",
+  "description": "OpenAI provider plugin for Shiro.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup ./src/index.ts --format esm --clean && tsc --emitDeclarationOnly",
+    "clean": "rimraf dist",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "@shiro/core": "workspace:*",
+    "openai": "^7.2.0"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}

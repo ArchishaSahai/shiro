@@ -25,7 +25,7 @@ import { cloneAgentConfig, validateAgentConfig } from "./validation.js";
 export interface AgentConfig {
   readonly name: string;
   readonly instructions: string;
-  readonly provider: Provider;
+  readonly provider: Provider | string;
   readonly tools?: readonly Tool[];
   readonly guardrails?: readonly Guardrail[];
   readonly middleware?: readonly Middleware[];
@@ -97,7 +97,7 @@ export class Agent {
   }
 
   /** Provider selected for this agent. */
-  get provider(): Provider {
+  get provider(): Provider | string {
     return this.#config.provider;
   }
 

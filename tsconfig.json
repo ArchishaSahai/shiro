@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/shared" },
     { "path": "./packages/core" },
+    { "path": "./packages/openai" },
     { "path": "./packages/cli" },
     { "path": "./apps/docs" },
     { "path": "./apps/studio" },

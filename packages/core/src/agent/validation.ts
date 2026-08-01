@@ -17,8 +17,12 @@ export function validateAgentConfig(config: AgentConfig): void {
   assertNonEmptyString(config.name, "Agent name is required.");
   assertNonEmptyString(config.instructions, "Agent instructions are required.");
 
-  if (!isObject(config.provider)) {
+  if (typeof config.provider !== "string" && !isObject(config.provider)) {
     throwConfigurationError("Agent provider is required.");
+  }
+
+  if (typeof config.provider === "string") {
+    assertNonEmptyString(config.provider, "Agent provider is required.");
   }
 
   assertOptionalArray(config.tools, "Agent tools must be an array.");

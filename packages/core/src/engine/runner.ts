@@ -1,6 +1,7 @@
 import type { RunResult } from "../agent/index.js";
 import { ConfigurationError, RuntimeError, ShiroError, ShiroErrorCode } from "../errors/index.js";
 import { ShiroEventType, type ShiroEvent } from "../events/index.js";
+import type { ProviderResponse } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import { FinishReason, MessageRole, type Message, type Metadata } from "../shared/index.js";
 import { isTerminalRunnerState, PipelineStage, RunnerState } from "./lifecycle.js";
@@ -17,6 +18,7 @@ export class Runner {
   #state = RunnerState.Created;
   #stage = PipelineStage.Created;
   #messages: readonly Message[] = [];
+  #providerResponse: ProviderResponse | undefined;
 
   constructor(dependencies: RunnerDependencies) {
     this.#dependencies = Object.freeze({ ...dependencies });
@@ -156,12 +158,34 @@ export class Runner {
   async #executeProviderStage(): Promise<void> {
     this.#setStage(PipelineStage.ExecuteProvider);
     this.#throwIfCancelled();
-    await this.#invokeProviderPlaceholder();
+    const providerContext: Partial<MutableProviderContext> = {
+      agentName: this.#dependencies.agent.name,
+      runId: this.runId,
+    };
+
+    if (this.context.metadata !== undefined) {
+      providerContext.metadata = this.context.metadata;
+    }
+
+    if (this.context.signal !== undefined) {
+      providerContext.signal = this.context.signal;
+    }
+
+    this.#providerResponse = await this.context.engine.provider.generate(
+      {
+        instructions: this.#dependencies.agent.instructions,
+        messages: this.#messages,
+      },
+      providerContext as MutableProviderContext
+    );
   }
 
   #processResultStage(): void {
     this.#setStage(PipelineStage.ProcessResult);
     this.#throwIfCancelled();
+    if (this.#providerResponse !== undefined) {
+      this.#messages = Object.freeze([...this.#messages, this.#providerResponse.message]);
+    }
   }
 
   async #finalizeStage(): Promise<RunResult> {
@@ -192,16 +216,12 @@ export class Runner {
     return result;
   }
 
-  async #invokeProviderPlaceholder(): Promise<void> {
-    await Promise.resolve();
-  }
-
   #createResult(finishReason: FinishReason): RunResult {
     return Object.freeze({
       context: this.context,
       finishReason,
       messages: this.#messages,
-      output: "",
+      output: this.#providerResponse?.message.content ?? "",
       runId: this.runId,
     });
   }
@@ -268,6 +288,13 @@ interface BaseRunnerEvent<TType extends ShiroEventType> {
 type MutableBaseRunnerEvent<TType extends ShiroEventType> = {
   -readonly [Key in keyof BaseRunnerEvent<TType>]: BaseRunnerEvent<TType>[Key];
 };
+
+interface MutableProviderContext {
+  agentName: string;
+  runId: string;
+  metadata?: Metadata;
+  signal?: AbortSignal;
+}
 
 function toUserMessage(input: RunnerDependencies["input"]): Message {
   if (typeof input !== "string") {

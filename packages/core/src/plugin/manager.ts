@@ -66,6 +66,30 @@ export class PluginManager {
     await this.#runLifecycle(PluginLifecycle.Registered, PluginLifecycle.Loaded, "load");
   }
 
+  /** Moves all plugins as far as the started lifecycle state. */
+  async activate(): Promise<void> {
+    this.#validateDependencies();
+
+    for (const plugin of this.#registry.list()) {
+      const lifecycle = this.#registry.lifecycle(plugin.metadata.id);
+
+      if (lifecycle === PluginLifecycle.Registered) {
+        await plugin.load?.(this.#context);
+        this.#registry.setLifecycle(plugin.metadata.id, PluginLifecycle.Loaded);
+      }
+
+      if (this.#registry.lifecycle(plugin.metadata.id) === PluginLifecycle.Loaded) {
+        await plugin.initialize?.(this.#context);
+        this.#registry.setLifecycle(plugin.metadata.id, PluginLifecycle.Initialized);
+      }
+
+      if (this.#registry.lifecycle(plugin.metadata.id) === PluginLifecycle.Initialized) {
+        await plugin.start?.(this.#context);
+        this.#registry.setLifecycle(plugin.metadata.id, PluginLifecycle.Started);
+      }
+    }
+  }
+
   /** Initializes all loaded plugins. */
   async initialize(): Promise<void> {
     await this.#runLifecycle(PluginLifecycle.Loaded, PluginLifecycle.Initialized, "initialize");

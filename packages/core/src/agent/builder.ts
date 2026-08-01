@@ -22,7 +22,7 @@ type MutableAgentConfig = {
 export class AgentBuilder {
   #name: string | undefined;
   #instructions: string | undefined;
-  #provider: Provider | undefined;
+  #provider: Provider | string | undefined;
   #tools: Tool[] = [];
   #guardrails: Guardrail[] = [];
   #middleware: Middleware[] = [];
@@ -47,7 +47,7 @@ export class AgentBuilder {
   }
 
   /** Sets the model provider for this agent. */
-  provider(provider: Provider): this {
+  provider(provider: Provider | string): this {
     this.#provider = provider;
     return this;
   }

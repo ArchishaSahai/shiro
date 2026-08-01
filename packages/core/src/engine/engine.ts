@@ -1,6 +1,6 @@
 import type { Agent, RunOptions, RunResult } from "../agent/index.js";
 import { ConfigurationError, ShiroErrorCode } from "../errors/index.js";
-import { PluginManager } from "../plugin/index.js";
+import { PluginManager, type Plugin } from "../plugin/index.js";
 import { ProviderRegistry, RegistryProviderResolver } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import { EngineState } from "./lifecycle.js";
@@ -62,6 +62,12 @@ export class Engine {
     return this.#pluginManager;
   }
 
+  /** Installs a plugin into this engine. */
+  use(plugin: Plugin): this {
+    this.#pluginManager.install(plugin);
+    return this;
+  }
+
   /**
    * Starts the engine lifecycle.
    */
@@ -109,6 +115,7 @@ export class Engine {
    * Executes one agent run through a new Runner instance.
    */
   async execute(agent: Agent, input: RunInput, options: RunOptions = {}): Promise<RunResult> {
+    await this.#pluginManager.activate();
     const runner = this.createRunner(agent, input, options);
     return runner.execute();
   }

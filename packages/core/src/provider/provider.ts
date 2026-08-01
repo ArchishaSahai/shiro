@@ -60,6 +60,7 @@ export interface Provider {
   readonly name: string;
   readonly metadata?: ProviderMetadata;
   generate(request: ProviderRequest, context: ProviderContext): Promise<ProviderResponse>;
+  stream?(request: ProviderRequest, context: ProviderContext): AsyncIterable<ProviderResponse>;
 }
 
 /**
