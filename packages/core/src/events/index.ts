@@ -21,6 +21,10 @@ export type {
   RunFailedEvent,
   RunStartedEvent,
   ShiroEvent,
+  ToolCompletedEvent,
+  ToolFailedEvent,
   ToolFinishedEvent,
+  ToolRequestedEvent,
   ToolStartedEvent,
+  ToolTimedOutEvent,
 } from "./events.js";

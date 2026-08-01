@@ -5,6 +5,7 @@ import type { MemoryProvider } from "../memory/index.js";
 import type { Middleware } from "../middleware/index.js";
 import type { Provider, ProviderRegistry } from "../provider/index.js";
 import type { Tool } from "../tool/index.js";
+import { ToolRegistry } from "../tool/index.js";
 import type { Tracer } from "../tracing/index.js";
 import type {
   PluginContext,
@@ -18,7 +19,7 @@ import type {
  */
 export class DefaultPluginContext implements PluginContext {
   readonly #providerRegistry: ProviderRegistry;
-  readonly #tools: Tool[] = [];
+  readonly #toolRegistry: ToolRegistry;
   readonly #middleware: Middleware[] = [];
   readonly #guardrails: Guardrail[] = [];
   readonly #memoryProviders: MemoryProvider[] = [];
@@ -27,8 +28,9 @@ export class DefaultPluginContext implements PluginContext {
   readonly #eventListeners: PluginEventListener[] = [];
   readonly #studioExtensions: StudioExtension[] = [];
 
-  constructor(providerRegistry: ProviderRegistry) {
+  constructor(providerRegistry: ProviderRegistry, toolRegistry = new ToolRegistry()) {
     this.#providerRegistry = providerRegistry;
+    this.#toolRegistry = toolRegistry;
   }
 
   /** Registers a provider with the provider registry. */
@@ -38,7 +40,7 @@ export class DefaultPluginContext implements PluginContext {
 
   /** Registers a tool contribution. */
   registerTool(tool: Tool): void {
-    this.#tools.push(tool);
+    this.#toolRegistry.register(tool);
   }
 
   /** Registers a middleware contribution. */
@@ -89,7 +91,7 @@ export class DefaultPluginContext implements PluginContext {
       middleware: Object.freeze([...this.#middleware]),
       providers: this.#providerRegistry.list(),
       studioExtensions: Object.freeze([...this.#studioExtensions]),
-      tools: Object.freeze([...this.#tools]),
+      tools: this.#toolRegistry.list(),
       tracers: Object.freeze([...this.#tracers]),
     });
   }

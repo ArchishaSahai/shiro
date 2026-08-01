@@ -1,6 +1,6 @@
 import { ProviderError, ShiroErrorCode } from "../errors/index.js";
 import type { JsonObject, Message, Metadata } from "../shared/index.js";
-import type { ToolCallRequest } from "../tool/index.js";
+import type { Tool, ToolCallRequest } from "../tool/index.js";
 
 /**
  * Provider feature flags used by orchestration code.
@@ -30,7 +30,7 @@ export interface ProviderMetadata {
 export interface ProviderRequest {
   readonly messages: readonly Message[];
   readonly instructions?: string;
-  readonly tools?: readonly ToolCallRequest[];
+  readonly tools?: readonly Tool[];
   readonly metadata?: Metadata;
 }
 

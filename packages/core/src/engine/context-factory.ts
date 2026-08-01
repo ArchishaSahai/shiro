@@ -2,6 +2,7 @@ import type { Agent } from "../agent/index.js";
 import type { ProviderResolver } from "../provider/index.js";
 import type { EngineContext } from "../runtime/index.js";
 import type { JsonValue } from "../shared/index.js";
+import { ToolExecutor, ToolRegistry } from "../tool/index.js";
 import type { EngineServices, RunnerOptions } from "./types.js";
 
 /**
@@ -25,6 +26,15 @@ export class DefaultEngineContextFactory {
     const context: Partial<MutableEngineContext> = {
       provider: this.#providerResolver.resolve(agent.provider),
     };
+    const tools = new ToolRegistry([
+      ...(this.#services.toolRegistry?.list() ?? []),
+      ...agent.tools,
+    ]);
+
+    if (tools.list().length > 0) {
+      context.tools = tools;
+      context.toolExecutor = this.#services.toolExecutor ?? new ToolExecutor(tools);
+    }
 
     const sessionStore = agent.sessionStore ?? this.#services.sessionStore;
     if (sessionStore !== undefined) {

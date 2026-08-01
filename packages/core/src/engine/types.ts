@@ -6,6 +6,7 @@ import type { Provider, ProviderRegistry, ProviderResolver } from "../provider/i
 import type { EngineContext, RunContext } from "../runtime/index.js";
 import type { SessionStore } from "../session/index.js";
 import type { Message, Metadata } from "../shared/index.js";
+import type { ToolExecutor, ToolRegistry } from "../tool/index.js";
 import type { Tracer } from "../tracing/index.js";
 import type { EngineState, PipelineStage, RunnerState } from "./lifecycle.js";
 
@@ -22,6 +23,8 @@ export interface EngineServices {
   readonly plugins?: PluginManagerConfig;
   readonly providerRegistry?: ProviderRegistry;
   readonly providerResolver?: ProviderResolver;
+  readonly toolRegistry?: ToolRegistry;
+  readonly toolExecutor?: ToolExecutor;
   readonly sessionStore?: SessionStore;
   readonly memory?: MemoryProvider;
   readonly tracer?: Tracer;
@@ -42,6 +45,7 @@ export interface EngineConfig extends EngineServices {
 export interface RunnerOptions {
   readonly sessionId?: string;
   readonly signal?: AbortSignal;
+  readonly maxIterations?: number;
   readonly metadata?: Metadata;
 }
 

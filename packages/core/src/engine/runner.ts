@@ -4,8 +4,17 @@ import { ShiroEventType, type ShiroEvent } from "../events/index.js";
 import type { ProviderResponse } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import { FinishReason, MessageRole, type Message, type Metadata } from "../shared/index.js";
+import {
+  ToolExecutionState,
+  type Tool,
+  type ToolCall,
+  type ToolContext,
+  type ToolResult,
+} from "../tool/index.js";
 import { isTerminalRunnerState, PipelineStage, RunnerState } from "./lifecycle.js";
 import type { RunnerDependencies, RunnerSnapshot } from "./types.js";
+
+const DEFAULT_MAX_ITERATIONS = 8;
 
 /**
  * Coordinates lifecycle state for exactly one agent execution.
@@ -19,6 +28,7 @@ export class Runner {
   #stage = PipelineStage.Created;
   #messages: readonly Message[] = [];
   #providerResponse: ProviderResponse | undefined;
+  #iteration = 0;
 
   constructor(dependencies: RunnerDependencies) {
     this.#dependencies = Object.freeze({ ...dependencies });
@@ -158,34 +168,31 @@ export class Runner {
   async #executeProviderStage(): Promise<void> {
     this.#setStage(PipelineStage.ExecuteProvider);
     this.#throwIfCancelled();
-    const providerContext: Partial<MutableProviderContext> = {
-      agentName: this.#dependencies.agent.name,
+    const maxIterations = this.#dependencies.context.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+
+    while (this.#iteration < maxIterations) {
+      this.#iteration += 1;
+      const response = await this.#callProvider();
+      this.#providerResponse = response;
+      this.#messages = Object.freeze([...this.#messages, response.message]);
+
+      if (response.toolCalls === undefined || response.toolCalls.length === 0) {
+        return;
+      }
+
+      await this.#executeToolCalls(response.toolCalls);
+    }
+
+    throw new RuntimeError({
+      code: ShiroErrorCode.Runtime,
+      message: `Run exceeded maximum iteration count of ${String(maxIterations)}.`,
       runId: this.runId,
-    };
-
-    if (this.context.metadata !== undefined) {
-      providerContext.metadata = this.context.metadata;
-    }
-
-    if (this.context.signal !== undefined) {
-      providerContext.signal = this.context.signal;
-    }
-
-    this.#providerResponse = await this.context.engine.provider.generate(
-      {
-        instructions: this.#dependencies.agent.instructions,
-        messages: this.#messages,
-      },
-      providerContext as MutableProviderContext
-    );
+    });
   }
 
   #processResultStage(): void {
     this.#setStage(PipelineStage.ProcessResult);
     this.#throwIfCancelled();
-    if (this.#providerResponse !== undefined) {
-      this.#messages = Object.freeze([...this.#messages, this.#providerResponse.message]);
-    }
   }
 
   async #finalizeStage(): Promise<RunResult> {
@@ -235,6 +242,141 @@ export class Runner {
       ...this.#baseEvent(ShiroEventType.RunFailed),
       error,
     });
+  }
+
+  async #callProvider(): Promise<ProviderResponse> {
+    const provider = this.context.engine.provider;
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.ProviderStarted),
+      providerName: provider.name,
+    });
+
+    const request: Partial<MutableProviderRequest> = {
+      instructions: this.#dependencies.agent.instructions,
+      messages: this.#messages,
+    };
+    const tools = this.#shouldAdvertiseTools() ? this.context.engine.tools?.list() : undefined;
+
+    if (tools !== undefined && tools.length > 0) {
+      request.tools = tools;
+    }
+
+    const response = await provider.generate(
+      request as MutableProviderRequest,
+      this.#providerContext()
+    );
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.ProviderFinished),
+      providerName: provider.name,
+    });
+
+    return response;
+  }
+
+  async #executeToolCalls(toolCalls: readonly ToolCall[]): Promise<void> {
+    const executor = this.context.engine.toolExecutor;
+
+    if (executor === undefined) {
+      throw new RuntimeError({
+        code: ShiroErrorCode.Runtime,
+        message: "Provider requested tool calls but no tool executor is available.",
+        runId: this.runId,
+      });
+    }
+
+    const results = await Promise.all(
+      toolCalls.map(async (toolCall) => {
+        await this.#publish({
+          ...this.#baseEvent(ShiroEventType.ToolRequested),
+          toolCall,
+        });
+        await this.#publish({
+          ...this.#baseEvent(ShiroEventType.ToolStarted),
+          toolCall,
+        });
+
+        const result = await executor.execute(toolCall, this.#toolContext());
+        await this.#publishToolResult(result);
+        return result;
+      })
+    );
+
+    this.#messages = Object.freeze([
+      ...this.#messages,
+      ...results.map((result) => toToolMessage(result)),
+    ]);
+  }
+
+  async #publishToolResult(result: ToolResult): Promise<void> {
+    if (result.state === ToolExecutionState.TimedOut) {
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.ToolTimedOut),
+        result,
+      });
+      return;
+    }
+
+    if (result.state === ToolExecutionState.Completed) {
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.ToolCompleted),
+        result,
+      });
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.ToolFinished),
+        result,
+      });
+      return;
+    }
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.ToolFailed),
+      result,
+    });
+  }
+
+  #providerContext(): MutableProviderContext {
+    const providerContext: Partial<MutableProviderContext> = {
+      agentName: this.#dependencies.agent.name,
+      runId: this.runId,
+    };
+
+    if (this.context.metadata !== undefined) {
+      providerContext.metadata = this.context.metadata;
+    }
+
+    if (this.context.signal !== undefined) {
+      providerContext.signal = this.context.signal;
+    }
+
+    return providerContext as MutableProviderContext;
+  }
+
+  #toolContext(): ToolContext {
+    const context: Partial<MutableToolContext> = {
+      agentName: this.#dependencies.agent.name,
+      engine: this.context.engine,
+      runId: this.runId,
+    };
+
+    if (this.context.sessionId !== undefined) {
+      context.sessionId = this.context.sessionId;
+    }
+
+    if (this.context.signal !== undefined) {
+      context.signal = this.context.signal;
+    }
+
+    if (this.context.metadata !== undefined) {
+      context.metadata = this.context.metadata;
+    }
+
+    return Object.freeze(context) as ToolContext;
+  }
+
+  #shouldAdvertiseTools(): boolean {
+    const lastMessage = this.#messages.at(-1);
+    return lastMessage?.role !== MessageRole.Tool;
   }
 
   #baseEvent<TType extends ShiroEventType>(type: TType): BaseRunnerEvent<TType> {
@@ -296,6 +438,16 @@ interface MutableProviderContext {
   signal?: AbortSignal;
 }
 
+interface MutableProviderRequest {
+  instructions: string;
+  messages: readonly Message[];
+  tools?: readonly Tool[];
+}
+
+type MutableToolContext = {
+  -readonly [Key in keyof ToolContext]: ToolContext[Key];
+};
+
 function toUserMessage(input: RunnerDependencies["input"]): Message {
   if (typeof input !== "string") {
     return input;
@@ -304,6 +456,24 @@ function toUserMessage(input: RunnerDependencies["input"]): Message {
   return Object.freeze({
     content: input,
     role: MessageRole.User,
+  });
+}
+
+function toToolMessage(result: ToolResult): Message {
+  const metadata: Record<string, string | number> = {
+    durationMs: result.durationMs,
+    state: result.state,
+  };
+
+  if (result.toolCallId !== undefined) {
+    metadata.toolCallId = result.toolCallId;
+  }
+
+  return Object.freeze({
+    content: JSON.stringify(result.output),
+    metadata: Object.freeze(metadata),
+    name: result.name,
+    role: MessageRole.Tool,
   });
 }
 

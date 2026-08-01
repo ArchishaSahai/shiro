@@ -3,6 +3,7 @@ import type { MemoryProvider } from "../memory/index.js";
 import type { Provider } from "../provider/index.js";
 import type { SessionStore } from "../session/index.js";
 import type { Metadata } from "../shared/index.js";
+import type { ToolExecutor, ToolRegistry } from "../tool/index.js";
 import type { Tracer } from "../tracing/index.js";
 
 /**
@@ -10,6 +11,8 @@ import type { Tracer } from "../tracing/index.js";
  */
 export interface EngineContext {
   readonly provider: Provider;
+  readonly tools?: ToolRegistry;
+  readonly toolExecutor?: ToolExecutor;
   readonly sessionStore?: SessionStore;
   readonly memory?: MemoryProvider;
   readonly tracer?: Tracer;
@@ -29,6 +32,7 @@ export interface RunContext {
   readonly runId: string;
   readonly agentName: string;
   readonly sessionId?: string;
+  readonly maxIterations?: number;
   readonly engine: EngineContext;
   readonly signal?: AbortSignal;
   readonly metadata?: Metadata;

@@ -10,8 +10,12 @@ export enum ShiroEventType {
   RunStarted = "run.started",
   ProviderStarted = "provider.started",
   ProviderFinished = "provider.finished",
+  ToolRequested = "tool.requested",
   ToolStarted = "tool.started",
   ToolFinished = "tool.finished",
+  ToolCompleted = "tool.completed",
+  ToolFailed = "tool.failed",
+  ToolTimedOut = "tool.timed_out",
   ApprovalRequested = "approval.requested",
   ApprovalGranted = "approval.granted",
   ApprovalRejected = "approval.rejected",
@@ -60,8 +64,28 @@ export interface ToolStartedEvent extends BaseShiroEvent {
   readonly toolCall: ToolCallRequest;
 }
 
+export interface ToolRequestedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ToolRequested;
+  readonly toolCall: ToolCallRequest;
+}
+
 export interface ToolFinishedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ToolFinished;
+  readonly result: ToolCallResult;
+}
+
+export interface ToolCompletedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ToolCompleted;
+  readonly result: ToolCallResult;
+}
+
+export interface ToolFailedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ToolFailed;
+  readonly result: ToolCallResult;
+}
+
+export interface ToolTimedOutEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ToolTimedOut;
   readonly result: ToolCallResult;
 }
 
@@ -127,8 +151,12 @@ export type ShiroEvent =
   | RunStartedEvent
   | ProviderStartedEvent
   | ProviderFinishedEvent
+  | ToolRequestedEvent
   | ToolStartedEvent
   | ToolFinishedEvent
+  | ToolCompletedEvent
+  | ToolFailedEvent
+  | ToolTimedOutEvent
   | ApprovalRequestedEvent
   | ApprovalGrantedEvent
   | ApprovalRejectedEvent

@@ -3,6 +3,7 @@ import { ConfigurationError, ShiroErrorCode } from "../errors/index.js";
 import { PluginManager, type Plugin } from "../plugin/index.js";
 import { ProviderRegistry, RegistryProviderResolver } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
+import { ToolRegistry } from "../tool/index.js";
 import { EngineState } from "./lifecycle.js";
 import { createId } from "./ids.js";
 import { DefaultEngineContextFactory } from "./context-factory.js";
@@ -26,6 +27,7 @@ export class Engine {
   readonly #id: string;
   readonly #services: EngineServices;
   readonly #providerRegistry: ProviderRegistry;
+  readonly #toolRegistry: ToolRegistry;
   readonly #pluginManager: PluginManager;
   readonly #contextFactory: EngineContextFactory;
   #state = EngineState.Created;
@@ -33,9 +35,11 @@ export class Engine {
   constructor(config: EngineConfig = {}) {
     this.#id = config.id ?? createId("engine");
     this.#providerRegistry = config.providerRegistry ?? new ProviderRegistry();
+    this.#toolRegistry = config.toolRegistry ?? new ToolRegistry();
     this.#pluginManager =
-      config.pluginManager ?? new PluginManager(this.#providerRegistry, config.plugins);
-    this.#services = freezeServices(config);
+      config.pluginManager ??
+      new PluginManager(this.#providerRegistry, config.plugins, this.#toolRegistry);
+    this.#services = freezeServices({ ...config, toolRegistry: this.#toolRegistry });
     this.#contextFactory = new DefaultEngineContextFactory(
       this.#services,
       config.providerResolver ?? new RegistryProviderResolver(this.#providerRegistry)
@@ -55,6 +59,11 @@ export class Engine {
   /** Provider registry owned by this engine. */
   get providerRegistry(): ProviderRegistry {
     return this.#providerRegistry;
+  }
+
+  /** Tool registry owned by this engine. */
+  get toolRegistry(): ToolRegistry {
+    return this.#toolRegistry;
   }
 
   /** Plugin manager owned by this engine. */
@@ -145,6 +154,10 @@ export class Engine {
       context.signal = options.signal;
     }
 
+    if (options.maxIterations !== undefined) {
+      context.maxIterations = options.maxIterations;
+    }
+
     if (options.metadata !== undefined) {
       context.metadata = Object.freeze({ ...options.metadata });
     }
@@ -198,6 +211,14 @@ function freezeServices(config: EngineConfig): EngineServices {
 
   if (config.providerResolver !== undefined) {
     services.providerResolver = config.providerResolver;
+  }
+
+  if (config.toolRegistry !== undefined) {
+    services.toolRegistry = config.toolRegistry;
+  }
+
+  if (config.toolExecutor !== undefined) {
+    services.toolExecutor = config.toolExecutor;
   }
 
   if (config.sessionStore !== undefined) {

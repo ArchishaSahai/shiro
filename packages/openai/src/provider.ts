@@ -6,6 +6,8 @@ import {
   type ProviderMetadata,
   type ProviderRequest,
   type ProviderResponse,
+  type Tool as ShiroTool,
+  type ToolCallRequest,
 } from "@shiro/core";
 import OpenAI from "openai";
 import type { ClientOptions } from "openai";
@@ -13,8 +15,10 @@ import type {
   Response,
   ResponseCreateParamsNonStreaming,
   ResponseCreateParamsStreaming,
+  ResponseFunctionToolCall,
   ResponseStreamEvent,
   ResponseTextDeltaEvent,
+  Tool as OpenAITool,
 } from "openai/resources/responses/responses";
 import type { ResolvedOpenAIProviderConfig, OpenAIProviderConfig } from "./config.js";
 import { resolveOpenAIProviderConfig } from "./config.js";
@@ -136,8 +140,12 @@ function createResponseParams(
   };
   const params =
     request.instructions === undefined ? base : { ...base, instructions: request.instructions };
+  const paramsWithTools =
+    request.tools === undefined || request.tools.length === 0
+      ? params
+      : { ...params, tools: request.tools.map(toOpenAITool) };
 
-  return stream ? { ...params, stream: true } : { ...params, stream: false };
+  return stream ? { ...paramsWithTools, stream: true } : { ...paramsWithTools, stream: false };
 }
 
 function createRequestOptions(context: ProviderContext) {
@@ -149,7 +157,22 @@ function toResponsesInput(messages: readonly Message[]): string {
 }
 
 function toProviderResponse(response: Response): ProviderResponse {
-  return toProviderResponseFromText(response.output_text);
+  const toolCalls = response.output.flatMap((item) =>
+    isFunctionToolCall(item) ? [toToolCallRequest(item)] : []
+  );
+  const message = Object.freeze({
+    content: response.output_text,
+    role: MessageRole.Assistant,
+  });
+
+  return Object.freeze(
+    toolCalls.length === 0
+      ? { message }
+      : {
+          message,
+          toolCalls: Object.freeze(toolCalls),
+        }
+  );
 }
 
 function toProviderResponseFromText(content: string): ProviderResponse {
@@ -163,4 +186,50 @@ function toProviderResponseFromText(content: string): ProviderResponse {
 
 function isTextDeltaEvent(event: ResponseStreamEvent): event is ResponseTextDeltaEvent {
   return event.type === "response.output_text.delta";
+}
+
+function toOpenAITool(tool: ShiroTool): OpenAITool {
+  const jsonSchema = tool.schema.toJSONSchema?.() ?? Object.freeze({ type: "object" });
+  const definition = {
+    name: tool.name,
+    parameters: jsonSchema,
+    strict: false,
+    type: "function" as const,
+  };
+
+  return tool.description === undefined
+    ? definition
+    : { ...definition, description: tool.description };
+}
+
+function isFunctionToolCall(item: Response["output"][number]): item is ResponseFunctionToolCall {
+  return item.type === "function_call";
+}
+
+function toToolCallRequest(item: ResponseFunctionToolCall): ToolCallRequest {
+  const parsedArguments = parseToolArguments(item.arguments);
+  const call: Partial<MutableToolCallRequest> = {
+    arguments: parsedArguments,
+    id: item.call_id,
+    name: item.name,
+  };
+
+  return Object.freeze(call) as ToolCallRequest;
+}
+
+type MutableToolCallRequest = {
+  -readonly [Key in keyof ToolCallRequest]: ToolCallRequest[Key];
+};
+
+function parseToolArguments(value: string) {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isJsonObject(parsed) ? parsed : Object.freeze({});
+  } catch {
+    return Object.freeze({});
+  }
+}
+
+function isJsonObject(value: unknown): value is Record<string, never> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -50,6 +50,7 @@ export interface AgentOptions {
  */
 export interface RunOptions extends CancellationOptions, TimeoutOptions {
   readonly sessionId?: string;
+  readonly maxIterations?: number;
   readonly metadata?: Metadata;
 }
 

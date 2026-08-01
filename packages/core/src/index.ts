@@ -63,7 +63,11 @@ export type {
   RunStartedEvent,
   ShiroEvent,
   ToolFinishedEvent,
+  ToolCompletedEvent,
+  ToolFailedEvent,
+  ToolRequestedEvent,
   ToolStartedEvent,
+  ToolTimedOutEvent,
 } from "./events/index.js";
 export { GuardrailDecision, GuardrailStage } from "./guardrails/index.js";
 export type { Guardrail, GuardrailContext, GuardrailResult } from "./guardrails/index.js";
@@ -127,12 +131,25 @@ export type {
   ResourceId,
   TimeoutOptions,
 } from "./shared/index.js";
+export {
+  tool,
+  ToolExecutionState,
+  ToolExecutor,
+  ToolRegistry,
+  ToolSerializer,
+  validateTool,
+  validateToolArguments,
+} from "./tool/index.js";
 export type {
   Tool,
+  ToolCall,
   ToolCallRequest,
   ToolCallResult,
   ToolContext,
-  ToolRegistry,
+  ToolDefinition,
+  ToolExecutionOptions,
+  ToolLogger,
+  ToolResult,
   ToolSchema,
 } from "./tool/index.js";
 export type { TraceAttributes, Tracer, TraceSpan } from "./tracing/index.js";

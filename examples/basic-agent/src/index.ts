@@ -1,7 +1,7 @@
 import { config as loadEnv } from "dotenv";
 import { fileURLToPath } from "node:url";
 
-import { Agent, Engine } from "@shiro/core";
+import { Agent, Engine, tool, type JsonObject, type ToolSchema } from "@shiro/core";
 import { OpenAIPlugin } from "@shiro/openai";
 
 loadEnv({
@@ -23,12 +23,63 @@ engine.use(
   })
 );
 
+interface WeatherInput extends JsonObject {
+  readonly location: string;
+}
+
+const weatherSchema: ToolSchema<WeatherInput> = {
+  parse(input: unknown): WeatherInput {
+    if (!isObject(input) || typeof input.location !== "string") {
+      throw new Error("location is required.");
+    }
+
+    return Object.freeze({
+      location: input.location,
+    });
+  },
+  toJSONSchema(): JsonObject {
+    return Object.freeze({
+      additionalProperties: false,
+      properties: Object.freeze({
+        location: Object.freeze({
+          description: "City or region for the weather lookup.",
+          type: "string",
+        }),
+      }),
+      required: Object.freeze(["location"]),
+      type: "object",
+    });
+  },
+};
+
+const weatherTool = tool({
+  description: "Returns the current weather for a location.",
+  execute: async ({ location }) => {
+    await Promise.resolve();
+    return Object.freeze({
+      condition: "sunny",
+      location,
+      temperatureC: 28,
+    });
+  },
+  name: "weather",
+  parameters: weatherSchema,
+});
+
 const agent = new Agent({
   instructions: "You are a helpful AI assistant.",
   name: "Assistant",
   provider: "openai",
+  tools: [weatherTool],
 });
 
-const result = await engine.execute(agent, "Hello!");
+const result = await engine.execute(
+  agent,
+  "What is the weather in Pune today? Use the weather tool before answering."
+);
 
 console.log(result.output);
+
+function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null;
+}

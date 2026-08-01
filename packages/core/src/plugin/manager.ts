@@ -1,5 +1,6 @@
 import { PluginError, ShiroErrorCode } from "../errors/index.js";
 import type { ProviderRegistry } from "../provider/index.js";
+import { ToolRegistry } from "../tool/index.js";
 import { DefaultPluginContext } from "./context.js";
 import { PluginLifecycle } from "./lifecycle.js";
 import { PluginRegistry } from "./registry.js";
@@ -19,8 +20,12 @@ export class PluginManager {
   readonly #context: DefaultPluginContext;
   readonly #loaders: readonly PluginLoader[];
 
-  constructor(providerRegistry: ProviderRegistry, config: PluginManagerConfig = {}) {
-    this.#context = new DefaultPluginContext(providerRegistry);
+  constructor(
+    providerRegistry: ProviderRegistry,
+    config: PluginManagerConfig = {},
+    toolRegistry = new ToolRegistry()
+  ) {
+    this.#context = new DefaultPluginContext(providerRegistry, toolRegistry);
     this.#loaders = Object.freeze([...(config.loaders ?? [])]);
 
     for (const plugin of config.plugins ?? []) {
