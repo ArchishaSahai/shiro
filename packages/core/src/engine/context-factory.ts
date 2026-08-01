@@ -1,4 +1,5 @@
 import type { Agent } from "../agent/index.js";
+import type { ProviderResolver } from "../provider/index.js";
 import type { EngineContext } from "../runtime/index.js";
 import type { JsonValue } from "../shared/index.js";
 import type { EngineServices, RunnerOptions } from "./types.js";
@@ -8,9 +9,11 @@ import type { EngineServices, RunnerOptions } from "./types.js";
  */
 export class DefaultEngineContextFactory {
   readonly #services: EngineServices;
+  readonly #providerResolver: ProviderResolver;
 
-  constructor(services: EngineServices) {
+  constructor(services: EngineServices, providerResolver: ProviderResolver) {
     this.#services = Object.freeze({ ...services });
+    this.#providerResolver = providerResolver;
   }
 
   /**
@@ -20,7 +23,7 @@ export class DefaultEngineContextFactory {
     const metadata = mergeMetadata(this.#services.metadata, agent.metadata, options?.metadata);
 
     const context: Partial<MutableEngineContext> = {
-      provider: agent.provider,
+      provider: this.#providerResolver.resolve(agent.provider),
     };
 
     const sessionStore = agent.sessionStore ?? this.#services.sessionStore;

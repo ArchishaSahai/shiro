@@ -23,6 +23,20 @@ export enum RunnerState {
 }
 
 /**
+ * Sequential stages that make up one agent execution pipeline.
+ */
+export enum PipelineStage {
+  Created = "created",
+  Initialize = "initialize",
+  Validate = "validate",
+  ResolveProvider = "resolve_provider",
+  PrepareMessages = "prepare_messages",
+  ExecuteProvider = "execute_provider",
+  ProcessResult = "process_result",
+  Finalize = "finalize",
+}
+
+/**
  * Returns true when a runner state is terminal.
  */
 export function isTerminalRunnerState(state: RunnerState): boolean {

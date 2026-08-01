@@ -1,12 +1,12 @@
-import type { Agent } from "../agent/index.js";
+import type { Agent, RunResult } from "../agent/index.js";
 import type { EventBus } from "../events/index.js";
 import type { MemoryProvider } from "../memory/index.js";
-import type { Provider } from "../provider/index.js";
+import type { Provider, ProviderRegistry, ProviderResolver } from "../provider/index.js";
 import type { EngineContext, RunContext } from "../runtime/index.js";
 import type { SessionStore } from "../session/index.js";
 import type { Message, Metadata } from "../shared/index.js";
 import type { Tracer } from "../tracing/index.js";
-import type { EngineState, RunnerState } from "./lifecycle.js";
+import type { EngineState, PipelineStage, RunnerState } from "./lifecycle.js";
 
 /**
  * Input accepted by the execution infrastructure.
@@ -17,6 +17,8 @@ export type RunInput = string | Message;
  * Long-lived services owned by an Engine.
  */
 export interface EngineServices {
+  readonly providerRegistry?: ProviderRegistry;
+  readonly providerResolver?: ProviderResolver;
   readonly sessionStore?: SessionStore;
   readonly memory?: MemoryProvider;
   readonly tracer?: Tracer;
@@ -63,7 +65,15 @@ export interface EngineSnapshot {
 export interface RunnerSnapshot {
   readonly runId: string;
   readonly state: RunnerState;
+  readonly stage: PipelineStage;
   readonly context: RunContext;
+}
+
+/**
+ * Internal output of the execution pipeline.
+ */
+export interface PipelineResult {
+  readonly result: RunResult;
 }
 
 /**

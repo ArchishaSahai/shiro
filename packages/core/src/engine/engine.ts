@@ -1,5 +1,6 @@
-import type { Agent, RunOptions } from "../agent/index.js";
+import type { Agent, RunOptions, RunResult } from "../agent/index.js";
 import { ConfigurationError, ShiroErrorCode } from "../errors/index.js";
+import { ProviderRegistry, RegistryProviderResolver } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import { EngineState } from "./lifecycle.js";
 import { createId } from "./ids.js";
@@ -23,13 +24,18 @@ import type {
 export class Engine {
   readonly #id: string;
   readonly #services: EngineServices;
+  readonly #providerRegistry: ProviderRegistry;
   readonly #contextFactory: EngineContextFactory;
   #state = EngineState.Created;
 
   constructor(config: EngineConfig = {}) {
     this.#id = config.id ?? createId("engine");
+    this.#providerRegistry = config.providerRegistry ?? new ProviderRegistry();
     this.#services = freezeServices(config);
-    this.#contextFactory = new DefaultEngineContextFactory(this.#services);
+    this.#contextFactory = new DefaultEngineContextFactory(
+      this.#services,
+      config.providerResolver ?? new RegistryProviderResolver(this.#providerRegistry)
+    );
   }
 
   /** Unique engine identifier. */
@@ -40,6 +46,11 @@ export class Engine {
   /** Current engine lifecycle state. */
   get state(): EngineState {
     return this.#state;
+  }
+
+  /** Provider registry owned by this engine. */
+  get providerRegistry(): ProviderRegistry {
+    return this.#providerRegistry;
   }
 
   /**
@@ -83,6 +94,14 @@ export class Engine {
       context,
       input,
     });
+  }
+
+  /**
+   * Executes one agent run through a new Runner instance.
+   */
+  async execute(agent: Agent, input: RunInput, options: RunOptions = {}): Promise<RunResult> {
+    const runner = this.createRunner(agent, input, options);
+    return runner.execute();
   }
 
   /**
@@ -148,6 +167,14 @@ type MutableRunContext = {
 
 function freezeServices(config: EngineConfig): EngineServices {
   const services: Partial<MutableEngineServices> = {};
+
+  if (config.providerRegistry !== undefined) {
+    services.providerRegistry = config.providerRegistry;
+  }
+
+  if (config.providerResolver !== undefined) {
+    services.providerResolver = config.providerResolver;
+  }
 
   if (config.sessionStore !== undefined) {
     services.sessionStore = config.sessionStore;

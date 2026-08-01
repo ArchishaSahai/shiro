@@ -24,13 +24,14 @@ export {
   ToolNotFoundError,
   ValidationError,
 } from "./errors/index.js";
-export { Engine, EngineState, Runner, RunnerState } from "./engine/index.js";
+export { Engine, EngineState, PipelineStage, Runner, RunnerState } from "./engine/index.js";
 export type {
   AgentProviderResolver,
   EngineConfig,
   EngineContextFactory,
   EngineServices,
   EngineSnapshot,
+  PipelineResult,
   RunInput,
   RunnerDependencies,
   RunnerOptions,
@@ -74,10 +75,21 @@ export type {
   MemoryWriteContext,
 } from "./memory/index.js";
 export type { Middleware, MiddlewareContext, MiddlewareRunResult } from "./middleware/index.js";
+export {
+  BaseProvider,
+  ProviderRegistry,
+  RegistryProviderResolver,
+  toProviderError,
+} from "./provider/index.js";
 export type {
   Provider,
+  ProviderCapabilities,
   ProviderContext,
+  ProviderFactory,
+  ProviderFactoryConfig,
+  ProviderMetadata,
   ProviderRequest,
+  ProviderResolver,
   ProviderResponse,
 } from "./provider/index.js";
 export type { EngineContext, RunContext, RuntimeContext } from "./runtime/index.js";
