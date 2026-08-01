@@ -16,6 +16,7 @@ export enum ShiroErrorCode {
   ApprovalRejected = "approval_rejected_error",
   Handoff = "handoff_error",
   Middleware = "middleware_error",
+  Plugin = "plugin_error",
   Timeout = "timeout_error",
 }
 
@@ -82,6 +83,9 @@ export class HandoffError extends ShiroError {}
 
 /** Middleware failed while handling a lifecycle hook. */
 export class MiddlewareError extends ShiroError {}
+
+/** Plugin registration, loading, or lifecycle management failed. */
+export class PluginError extends ShiroError {}
 
 /** An operation exceeded its configured timeout. */
 export class TimeoutError extends ShiroError {}

@@ -5,6 +5,7 @@ export {
   HandoffError,
   MemoryError,
   MiddlewareError,
+  PluginError,
   ProviderError,
   RuntimeError,
   SessionError,

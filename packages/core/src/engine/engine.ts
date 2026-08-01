@@ -1,5 +1,6 @@
 import type { Agent, RunOptions, RunResult } from "../agent/index.js";
 import { ConfigurationError, ShiroErrorCode } from "../errors/index.js";
+import { PluginManager } from "../plugin/index.js";
 import { ProviderRegistry, RegistryProviderResolver } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import { EngineState } from "./lifecycle.js";
@@ -25,12 +26,15 @@ export class Engine {
   readonly #id: string;
   readonly #services: EngineServices;
   readonly #providerRegistry: ProviderRegistry;
+  readonly #pluginManager: PluginManager;
   readonly #contextFactory: EngineContextFactory;
   #state = EngineState.Created;
 
   constructor(config: EngineConfig = {}) {
     this.#id = config.id ?? createId("engine");
     this.#providerRegistry = config.providerRegistry ?? new ProviderRegistry();
+    this.#pluginManager =
+      config.pluginManager ?? new PluginManager(this.#providerRegistry, config.plugins);
     this.#services = freezeServices(config);
     this.#contextFactory = new DefaultEngineContextFactory(
       this.#services,
@@ -51,6 +55,11 @@ export class Engine {
   /** Provider registry owned by this engine. */
   get providerRegistry(): ProviderRegistry {
     return this.#providerRegistry;
+  }
+
+  /** Plugin manager owned by this engine. */
+  get plugins(): PluginManager {
+    return this.#pluginManager;
   }
 
   /**
@@ -170,6 +179,14 @@ function freezeServices(config: EngineConfig): EngineServices {
 
   if (config.providerRegistry !== undefined) {
     services.providerRegistry = config.providerRegistry;
+  }
+
+  if (config.pluginManager !== undefined) {
+    services.pluginManager = config.pluginManager;
+  }
+
+  if (config.plugins !== undefined) {
+    services.plugins = config.plugins;
   }
 
   if (config.providerResolver !== undefined) {

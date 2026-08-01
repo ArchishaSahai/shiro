@@ -1,6 +1,7 @@
 import type { Agent, RunResult } from "../agent/index.js";
 import type { EventBus } from "../events/index.js";
 import type { MemoryProvider } from "../memory/index.js";
+import type { PluginManager, PluginManagerConfig } from "../plugin/index.js";
 import type { Provider, ProviderRegistry, ProviderResolver } from "../provider/index.js";
 import type { EngineContext, RunContext } from "../runtime/index.js";
 import type { SessionStore } from "../session/index.js";
@@ -17,6 +18,8 @@ export type RunInput = string | Message;
  * Long-lived services owned by an Engine.
  */
 export interface EngineServices {
+  readonly pluginManager?: PluginManager;
+  readonly plugins?: PluginManagerConfig;
   readonly providerRegistry?: ProviderRegistry;
   readonly providerResolver?: ProviderResolver;
   readonly sessionStore?: SessionStore;

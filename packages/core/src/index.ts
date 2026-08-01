@@ -14,6 +14,7 @@ export {
   HandoffError,
   MemoryError,
   MiddlewareError,
+  PluginError,
   ProviderError,
   RuntimeError,
   SessionError,
@@ -75,6 +76,26 @@ export type {
   MemoryWriteContext,
 } from "./memory/index.js";
 export type { Middleware, MiddlewareContext, MiddlewareRunResult } from "./middleware/index.js";
+export {
+  DefaultPluginContext,
+  PluginCapability,
+  PluginLifecycle,
+  PluginManager,
+  PluginRegistry,
+} from "./plugin/index.js";
+export type {
+  Plugin,
+  PluginCapabilityDefinition,
+  PluginContext,
+  PluginContributions,
+  PluginDependency,
+  PluginEventListener,
+  PluginLoader,
+  PluginManagerConfig,
+  PluginMetadata,
+  PluginSnapshot,
+  StudioExtension,
+} from "./plugin/index.js";
 export {
   BaseProvider,
   ProviderRegistry,
