@@ -1,3 +1,4 @@
+export { Agent, AgentBuilder } from "./agent/index.js";
 export type { AgentConfig, AgentOptions, RunOptions, RunResult } from "./agent/index.js";
 export type {
   ApprovalContext,

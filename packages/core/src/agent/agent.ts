@@ -16,6 +16,8 @@ import type { Tool } from "../tool/index.js";
 import type { Tracer } from "../tracing/index.js";
 import type { HumanApproval } from "../approval/index.js";
 import type { EventBus } from "../events/index.js";
+import { AgentBuilder } from "./builder.js";
+import { cloneAgentConfig, validateAgentConfig } from "./validation.js";
 
 /**
  * Immutable public definition for an agent.
@@ -61,4 +63,98 @@ export interface RunResult<TOutput = string> {
   readonly finishReason: FinishReason;
   readonly context: RunContext;
   readonly metadata?: Metadata;
+}
+
+/**
+ * Developer-facing immutable agent definition.
+ *
+ * Agent owns configuration only. It does not execute runs, call providers,
+ * invoke tools, or coordinate runtime behavior.
+ */
+export class Agent {
+  readonly #config: AgentConfig;
+
+  constructor(config: AgentConfig) {
+    validateAgentConfig(config);
+    this.#config = cloneAgentConfig(config);
+  }
+
+  /**
+   * Creates a fluent builder that produces the same immutable Agent type.
+   */
+  static builder(): AgentBuilder {
+    return new AgentBuilder();
+  }
+
+  /** Agent name used for tracing, events, and diagnostics. */
+  get name(): string {
+    return this.#config.name;
+  }
+
+  /** Developer-authored instructions associated with this agent. */
+  get instructions(): string {
+    return this.#config.instructions;
+  }
+
+  /** Provider selected for this agent. */
+  get provider(): Provider {
+    return this.#config.provider;
+  }
+
+  /** Tools available to this agent. */
+  get tools(): readonly Tool[] {
+    return this.#config.tools ?? [];
+  }
+
+  /** Guardrails configured for this agent. */
+  get guardrails(): readonly Guardrail[] {
+    return this.#config.guardrails ?? [];
+  }
+
+  /** Middleware configured for this agent. */
+  get middleware(): readonly Middleware[] {
+    return this.#config.middleware ?? [];
+  }
+
+  /** Optional memory provider configured for this agent. */
+  get memory(): MemoryProvider | undefined {
+    return this.#config.memory;
+  }
+
+  /** Optional session store configured for this agent. */
+  get sessionStore(): SessionStore | undefined {
+    return this.#config.sessionStore;
+  }
+
+  /** Optional tracer configured for this agent. */
+  get tracer(): Tracer | undefined {
+    return this.#config.tracer;
+  }
+
+  /** Optional event bus configured for this agent. */
+  get events(): EventBus | undefined {
+    return this.#config.events;
+  }
+
+  /** Optional human approval integration configured for this agent. */
+  get humanApproval(): HumanApproval | undefined {
+    return this.#config.humanApproval;
+  }
+
+  /** Optional handoff strategy configured for this agent. */
+  get handoff(): HandoffStrategy | undefined {
+    return this.#config.handoff;
+  }
+
+  /** Immutable agent metadata. */
+  get metadata(): Metadata | undefined {
+    return this.#config.metadata;
+  }
+
+  /**
+   * Returns the immutable configuration snapshot stored by this agent.
+   */
+  get config(): AgentConfig {
+    return this.#config;
+  }
 }
