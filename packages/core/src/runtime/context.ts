@@ -8,7 +8,7 @@ import type { Tracer } from "../tracing/index.js";
 /**
  * Long-lived services available to Shiro orchestration.
  */
-export interface RuntimeContext {
+export interface EngineContext {
   readonly provider: Provider;
   readonly sessionStore?: SessionStore;
   readonly memory?: MemoryProvider;
@@ -18,13 +18,18 @@ export interface RuntimeContext {
 }
 
 /**
+ * Compatibility alias for earlier public contracts. Prefer EngineContext in new code.
+ */
+export type RuntimeContext = EngineContext;
+
+/**
  * Per-execution context shared across lifecycle hooks.
  */
 export interface RunContext {
   readonly runId: string;
   readonly agentName: string;
   readonly sessionId?: string;
-  readonly runtime: RuntimeContext;
+  readonly engine: EngineContext;
   readonly signal?: AbortSignal;
   readonly metadata?: Metadata;
 }

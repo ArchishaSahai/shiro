@@ -24,6 +24,18 @@ export {
   ToolNotFoundError,
   ValidationError,
 } from "./errors/index.js";
+export { Engine, EngineState, Runner, RunnerState } from "./engine/index.js";
+export type {
+  AgentProviderResolver,
+  EngineConfig,
+  EngineContextFactory,
+  EngineServices,
+  EngineSnapshot,
+  RunInput,
+  RunnerDependencies,
+  RunnerOptions,
+  RunnerSnapshot,
+} from "./engine/index.js";
 export type { ShiroErrorDetails } from "./errors/index.js";
 export { ShiroEventType } from "./events/index.js";
 export type {
@@ -68,7 +80,7 @@ export type {
   ProviderRequest,
   ProviderResponse,
 } from "./provider/index.js";
-export type { RunContext, RuntimeContext } from "./runtime/index.js";
+export type { EngineContext, RunContext, RuntimeContext } from "./runtime/index.js";
 export type { Session, SessionSnapshot, SessionStore } from "./session/index.js";
 export { FinishReason, MessageRole } from "./shared/index.js";
 export type {

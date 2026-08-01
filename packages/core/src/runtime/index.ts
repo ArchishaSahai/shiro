@@ -1,1 +1,1 @@
-export type { RunContext, RuntimeContext } from "./context.js";
+export type { EngineContext, RunContext, RuntimeContext } from "./context.js";
