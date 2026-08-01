@@ -2,6 +2,7 @@ import type { Guardrail } from "../guardrails/index.js";
 import type { HandoffStrategy } from "../handoff/index.js";
 import type { MemoryProvider } from "../memory/index.js";
 import type { Middleware } from "../middleware/index.js";
+import type { OutputSchema } from "../output/index.js";
 import type { Provider } from "../provider/index.js";
 import type { RunContext } from "../runtime/index.js";
 import type { SessionStore } from "../session/index.js";
@@ -22,10 +23,11 @@ import { cloneAgentConfig, validateAgentConfig } from "./validation.js";
 /**
  * Immutable public definition for an agent.
  */
-export interface AgentConfig {
+export interface AgentConfig<TOutput = string> {
   readonly name: string;
   readonly instructions: string;
   readonly provider: Provider | string;
+  readonly output?: OutputSchema<TOutput>;
   readonly tools?: readonly AgentTool[];
   readonly guardrails?: readonly Guardrail[];
   readonly middleware?: readonly Middleware[];
@@ -72,10 +74,10 @@ export interface RunResult<TOutput = string> {
  * Agent owns configuration only. It does not execute runs, call providers,
  * invoke tools, or coordinate runtime behavior.
  */
-export class Agent {
-  readonly #config: AgentConfig;
+export class Agent<TOutput = string> {
+  readonly #config: AgentConfig<TOutput>;
 
-  constructor(config: AgentConfig) {
+  constructor(config: AgentConfig<TOutput>) {
     validateAgentConfig(config);
     this.#config = cloneAgentConfig(config);
   }
@@ -100,6 +102,11 @@ export class Agent {
   /** Provider selected for this agent. */
   get provider(): Provider | string {
     return this.#config.provider;
+  }
+
+  /** Optional final-output schema for structured responses. */
+  get output(): OutputSchema<TOutput> | undefined {
+    return this.#config.output;
   }
 
   /** Tools available to this agent. */
@@ -155,7 +162,7 @@ export class Agent {
   /**
    * Returns the immutable configuration snapshot stored by this agent.
    */
-  get config(): AgentConfig {
+  get config(): AgentConfig<TOutput> {
     return this.#config;
   }
 }
@@ -163,4 +170,4 @@ export class Agent {
 /**
  * Capabilities available to an agent as callable tools.
  */
-export type AgentTool = Tool | Agent;
+export type AgentTool = Tool | Agent<unknown>;

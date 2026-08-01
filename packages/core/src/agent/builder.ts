@@ -4,6 +4,7 @@ import type { Guardrail } from "../guardrails/index.js";
 import type { HandoffStrategy } from "../handoff/index.js";
 import type { MemoryProvider } from "../memory/index.js";
 import type { Middleware } from "../middleware/index.js";
+import type { OutputSchema } from "../output/index.js";
 import type { Provider } from "../provider/index.js";
 import type { SessionStore } from "../session/index.js";
 import type { Metadata } from "../shared/index.js";
@@ -12,16 +13,17 @@ import { Agent, type AgentConfig, type AgentTool } from "./agent.js";
 import { validateAgentConfig } from "./validation.js";
 
 type MutableAgentConfig = {
-  -readonly [Key in keyof AgentConfig]: AgentConfig[Key];
+  -readonly [Key in keyof AgentConfig<unknown>]: AgentConfig<unknown>[Key];
 };
 
 /**
  * Fluent builder for composing an immutable Agent configuration.
  */
-export class AgentBuilder {
+export class AgentBuilder<TOutput = string> {
   #name: string | undefined;
   #instructions: string | undefined;
   #provider: Provider | string | undefined;
+  #output: OutputSchema<TOutput> | undefined;
   #tools: AgentTool[] = [];
   #guardrails: Guardrail[] = [];
   #middleware: Middleware[] = [];
@@ -49,6 +51,13 @@ export class AgentBuilder {
   provider(provider: Provider | string): this {
     this.#provider = provider;
     return this;
+  }
+
+  /** Sets the structured-output schema for this agent. */
+  output<TNextOutput>(output: OutputSchema<TNextOutput>): AgentBuilder<TNextOutput> {
+    const next = this as unknown as AgentBuilder<TNextOutput>;
+    next.#output = output;
+    return next;
   }
 
   /** Replaces the full tool list for this agent. */
@@ -132,13 +141,13 @@ export class AgentBuilder {
   /**
    * Builds an immutable Agent from the accumulated configuration.
    */
-  build(): Agent {
+  build(): Agent<TOutput> {
     const config = this.#toConfig();
     validateAgentConfig(config);
     return new Agent(config);
   }
 
-  #toConfig(): AgentConfig {
+  #toConfig(): AgentConfig<TOutput> {
     const config: Partial<MutableAgentConfig> = {
       guardrails: this.#guardrails,
       middleware: this.#middleware,
@@ -155,6 +164,10 @@ export class AgentBuilder {
 
     if (this.#provider !== undefined) {
       config.provider = this.#provider;
+    }
+
+    if (this.#output !== undefined) {
+      config.output = this.#output;
     }
 
     if (this.#memory !== undefined) {
@@ -185,6 +198,6 @@ export class AgentBuilder {
       config.metadata = this.#metadata;
     }
 
-    return config as AgentConfig;
+    return config as AgentConfig<TOutput>;
   }
 }

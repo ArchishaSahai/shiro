@@ -82,7 +82,7 @@ export class Engine {
   }
 
   /** Registers an agent for multi-agent orchestration. */
-  registerAgent(agent: Agent): this {
+  registerAgent(agent: Agent<unknown>): this {
     this.#agentRegistry.registerAgent(agent);
     return this;
   }
@@ -134,7 +134,11 @@ export class Engine {
   /**
    * Creates a runner for a single agent execution.
    */
-  createRunner(agent: Agent, input: RunInput, options: RunOptions = {}): Runner {
+  createRunner<TOutput = string>(
+    agent: Agent<TOutput>,
+    input: RunInput,
+    options: RunOptions = {}
+  ): Runner<TOutput> {
     this.#ensureReady();
 
     const context = this.#createRunContext(agent, options);
@@ -149,7 +153,11 @@ export class Engine {
   /**
    * Executes one agent run through a new Runner instance.
    */
-  async execute(agent: Agent, input: RunInput, options: RunOptions = {}): Promise<RunResult> {
+  async execute<TOutput = string>(
+    agent: Agent<TOutput>,
+    input: RunInput,
+    options: RunOptions = {}
+  ): Promise<RunResult<TOutput>> {
     await this.#pluginManager.activate();
     const runner = this.createRunner(agent, input, options);
     return runner.execute();
@@ -165,7 +173,7 @@ export class Engine {
     });
   }
 
-  #createRunContext(agent: Agent, options: RunnerOptions): RunContext {
+  #createRunContext(agent: Agent<unknown>, options: RunnerOptions): RunContext {
     const context: Partial<MutableRunContext> = {
       agentName: agent.name,
       engine: this.#contextFactory.create(agent, options),
@@ -277,6 +285,10 @@ function freezeServices(config: EngineConfig): EngineServices {
 
   if (config.contextCompactor !== undefined) {
     services.contextCompactor = config.contextCompactor;
+  }
+
+  if (config.structuredOutputManager !== undefined) {
+    services.structuredOutputManager = config.structuredOutputManager;
   }
 
   if (config.tracer !== undefined) {

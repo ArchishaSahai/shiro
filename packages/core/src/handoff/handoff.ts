@@ -16,8 +16,8 @@ export enum HandoffDecisionStatus {
 export interface HandoffContext {
   readonly runId: string;
   readonly agentName: string;
-  readonly activeAgent: Agent;
-  readonly availableAgents: readonly Agent[];
+  readonly activeAgent: Agent<unknown>;
+  readonly availableAgents: readonly Agent<unknown>[];
   readonly history: readonly HandoffResult[];
   readonly messages: readonly Message[];
   readonly sessionId?: string;
@@ -90,23 +90,23 @@ export class AgentExecutionGraph {
  * Resolves agents by name.
  */
 export interface AgentResolver {
-  resolve(name: string): Agent;
+  resolve(name: string): Agent<unknown>;
 }
 
 /**
  * Registry of agents available for multi-agent orchestration.
  */
 export class AgentRegistry implements AgentResolver {
-  readonly #agents = new Map<string, Agent>();
+  readonly #agents = new Map<string, Agent<unknown>>();
 
-  constructor(agents: readonly Agent[] = []) {
+  constructor(agents: readonly Agent<unknown>[] = []) {
     for (const agent of agents) {
       this.registerAgent(agent);
     }
   }
 
   /** Registers an immutable agent by name. */
-  registerAgent(agent: Agent): void {
+  registerAgent(agent: Agent<unknown>): void {
     if (this.#agents.has(agent.name)) {
       throwHandoffError(`Agent "${agent.name}" is already registered.`);
     }
@@ -120,7 +120,7 @@ export class AgentRegistry implements AgentResolver {
   }
 
   /** Resolves a registered agent by name. */
-  resolve(name: string): Agent {
+  resolve(name: string): Agent<unknown> {
     const agent = this.#agents.get(name);
 
     if (agent === undefined) {
@@ -136,7 +136,7 @@ export class AgentRegistry implements AgentResolver {
   }
 
   /** Lists registered agents. */
-  list(): readonly Agent[] {
+  list(): readonly Agent<unknown>[] {
     return Object.freeze([...this.#agents.values()]);
   }
 }
@@ -183,7 +183,7 @@ export class HandoffManager {
   }
 
   /** Available registered agents. */
-  get agents(): readonly Agent[] {
+  get agents(): readonly Agent<unknown>[] {
     return this.#registry.list();
   }
 
@@ -197,7 +197,12 @@ export class HandoffManager {
   }
 
   /** Switches active agent after validating depth, cycles, and target availability. */
-  handoff(fromAgent: Agent, targetAgent: string, reason?: string, metadata?: Metadata): Agent {
+  handoff(
+    fromAgent: Agent<unknown>,
+    targetAgent: string,
+    reason?: string,
+    metadata?: Metadata
+  ): Agent<unknown> {
     this.#depthLimiter.assertAllowed(this.#graph.edges.length);
     const next = this.#registry.resolve(targetAgent);
 

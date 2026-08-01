@@ -37,9 +37,9 @@ const DEFAULT_MAX_ITERATIONS = 8;
  * Runner does not execute providers, tools, memory, guardrails, tracing, approvals,
  * or handoffs in this phase. It only owns per-run state and transitions.
  */
-export class Runner {
+export class Runner<TOutput = string> {
   readonly #dependencies: RunnerDependencies;
-  #activeAgent: Agent;
+  #activeAgent: Agent<unknown>;
   #handoffManager: HandoffManager | undefined;
   #toolRegistry: ToolRegistry | undefined;
   #toolExecutor: ToolExecutor | undefined;
@@ -82,7 +82,7 @@ export class Runner {
    *
    * Provider execution is intentionally a placeholder stage in this phase.
    */
-  async execute(): Promise<RunResult> {
+  async execute(): Promise<RunResult<TOutput>> {
     try {
       await this.#initializeStage();
       await this.#validateStage();
@@ -244,12 +244,13 @@ export class Runner {
     this.#throwIfCancelled();
   }
 
-  async #finalizeStage(): Promise<RunResult> {
+  async #finalizeStage(): Promise<RunResult<TOutput>> {
     this.#setStage(PipelineStage.Finalize);
     this.#throwIfCancelled();
+    const output = await this.#prepareStructuredOutput();
     this.complete();
 
-    const result = this.#createResult(FinishReason.Completed);
+    const result = this.#createResult(FinishReason.Completed, output);
     await this.#persistSession();
     await this.#persistMemory();
 
@@ -260,12 +261,15 @@ export class Runner {
     return result;
   }
 
-  async #cancelExecution(): Promise<RunResult> {
+  async #cancelExecution(): Promise<RunResult<TOutput>> {
     if (!isTerminalRunnerState(this.#state)) {
       this.cancel();
     }
 
-    const result = this.#createResult(FinishReason.Cancelled);
+    const result = this.#createResult(
+      FinishReason.Cancelled,
+      (this.#providerResponse?.message.content ?? "") as TOutput
+    );
 
     await this.#publish({
       ...this.#baseEvent(ShiroEventType.RunCompleted),
@@ -274,14 +278,87 @@ export class Runner {
     return result;
   }
 
-  #createResult(finishReason: FinishReason): RunResult {
+  #createResult(finishReason: FinishReason, output: TOutput): RunResult<TOutput> {
     return Object.freeze({
       context: this.context,
       finishReason,
       messages: this.#messages,
-      output: this.#providerResponse?.message.content ?? "",
+      output,
       runId: this.runId,
     });
+  }
+
+  async #prepareStructuredOutput(): Promise<TOutput> {
+    const rawOutput = this.#providerResponse?.message.content ?? "";
+    const schema = this.#activeAgent.output;
+
+    if (schema === undefined) {
+      return rawOutput as TOutput;
+    }
+
+    const manager = this.context.engine.structuredOutputManager;
+
+    if (manager === undefined) {
+      throw new RuntimeError({
+        code: ShiroErrorCode.Runtime,
+        message: "Structured output schema was configured but no output manager is available.",
+        runId: this.runId,
+      });
+    }
+
+    const result = await manager.process({
+      events: {
+        repairCompleted: async (attempt) => {
+          await this.#publish({
+            ...this.#baseEvent(ShiroEventType.OutputRepairCompleted),
+            attempt,
+          });
+        },
+        repairFailed: async (attempt, error) => {
+          await this.#publish({
+            ...this.#baseEvent(ShiroEventType.OutputRepairFailed),
+            attempt,
+            error,
+          });
+        },
+        repairStarted: async (attempt, issues) => {
+          await this.#publish({
+            ...this.#baseEvent(ShiroEventType.OutputRepairStarted),
+            attempt,
+            issueCount: issues.length,
+          });
+        },
+        validationFailed: async (attempt, issues) => {
+          await this.#publish({
+            ...this.#baseEvent(ShiroEventType.OutputValidationFailed),
+            attempt,
+            issueCount: issues.length,
+          });
+        },
+        validationStarted: async (attempt) => {
+          await this.#publish({
+            ...this.#baseEvent(ShiroEventType.OutputValidationStarted),
+            attempt,
+          });
+        },
+        validationSucceeded: async (attempt) => {
+          await this.#publish({
+            ...this.#baseEvent(ShiroEventType.OutputValidationSucceeded),
+            attempt,
+          });
+        },
+      },
+      instructions: this.#activeAgent.instructions,
+      messages: this.#messages,
+      provider: this.context.engine.provider,
+      providerContext: this.#providerContext(),
+      rawOutput,
+      schema,
+    });
+
+    this.#messages = result.messages;
+    this.#providerResponse = result.response;
+    return result.output as TOutput;
   }
 
   async #publish(event: ShiroEvent): Promise<void> {
@@ -991,7 +1068,7 @@ const agentToolSchema: ToolSchema<AgentToolInput> = Object.freeze({
   },
 });
 
-function toAgentTool(agent: Agent): Tool<AgentToolInput> {
+function toAgentTool(agent: Agent<unknown>): Tool<AgentToolInput> {
   return tool({
     description: `Hand off execution to the ${agent.name} agent.`,
     execute: async (input) => {
@@ -1007,7 +1084,7 @@ function toAgentTool(agent: Agent): Tool<AgentToolInput> {
   });
 }
 
-function isAgent(value: unknown): value is Agent {
+function isAgent(value: unknown): value is Agent<unknown> {
   return (
     value instanceof Object && "name" in value && "instructions" in value && "provider" in value
   );

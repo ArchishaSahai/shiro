@@ -2,6 +2,7 @@ import type { ApprovalManager } from "../approval/index.js";
 import type { EventBus } from "../events/index.js";
 import type { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import type { ContextCompactor, MemoryManager, MemoryProvider } from "../memory/index.js";
+import type { StructuredOutputManager } from "../output/index.js";
 import type { Provider } from "../provider/index.js";
 import type { SessionManager, SessionStore } from "../session/index.js";
 import type { Metadata } from "../shared/index.js";
@@ -23,6 +24,7 @@ export interface EngineContext {
   readonly memoryManager?: MemoryManager;
   readonly memory?: MemoryProvider;
   readonly contextCompactor?: ContextCompactor;
+  readonly structuredOutputManager?: StructuredOutputManager;
   readonly tracer?: Tracer;
   readonly events?: EventBus;
   readonly metadata?: Metadata;

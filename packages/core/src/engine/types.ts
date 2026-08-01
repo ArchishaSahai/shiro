@@ -3,6 +3,7 @@ import type { ApprovalManager } from "../approval/index.js";
 import type { EventBus } from "../events/index.js";
 import type { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import type { ContextCompactor, MemoryManager, MemoryProvider } from "../memory/index.js";
+import type { StructuredOutputManager } from "../output/index.js";
 import type { PluginManager, PluginManagerConfig } from "../plugin/index.js";
 import type { Provider, ProviderRegistry, ProviderResolver } from "../provider/index.js";
 import type { EngineContext, RunContext } from "../runtime/index.js";
@@ -35,6 +36,7 @@ export interface EngineServices {
   readonly memoryManager?: MemoryManager;
   readonly memory?: MemoryProvider;
   readonly contextCompactor?: ContextCompactor;
+  readonly structuredOutputManager?: StructuredOutputManager;
   readonly tracer?: Tracer;
   readonly events?: EventBus;
   readonly metadata?: Metadata;
@@ -61,7 +63,7 @@ export interface RunnerOptions {
  * Immutable dependencies injected into a Runner.
  */
 export interface RunnerDependencies {
-  readonly agent: Agent;
+  readonly agent: Agent<unknown>;
   readonly input: RunInput;
   readonly context: RunContext;
 }
@@ -95,12 +97,12 @@ export interface PipelineResult {
  * Creates the provider-aware EngineContext for one agent run.
  */
 export interface EngineContextFactory {
-  create(agent: Agent, options?: RunnerOptions): EngineContext;
+  create(agent: Agent<unknown>, options?: RunnerOptions): EngineContext;
 }
 
 /**
  * Provider selected for a specific agent run.
  */
 export interface AgentProviderResolver {
-  resolve(agent: Agent): Provider;
+  resolve(agent: Agent<unknown>): Provider;
 }

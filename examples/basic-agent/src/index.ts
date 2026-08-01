@@ -1,13 +1,10 @@
 import { config as loadEnv } from "dotenv";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
 
 import {
   Agent,
   Engine,
-  InMemoryMemoryProvider,
-  InMemorySessionStore,
-  MemoryManager,
-  SessionManager,
   ShiroEventType,
   type Disposable,
   type EventBus,
@@ -53,6 +50,14 @@ class ConsoleEventBus implements EventBus {
     if (event.type === ShiroEventType.ContextPrepared) {
       console.log(`context prepared: ${String(event.messageCount)} messages`);
     }
+
+    if (event.type === ShiroEventType.OutputValidationFailed) {
+      console.log(`output validation failed: ${String(event.issueCount)} issue(s)`);
+    }
+
+    if (event.type === ShiroEventType.OutputRepairCompleted) {
+      console.log(`output repair completed: attempt ${String(event.attempt)}`);
+    }
   }
 
   subscribe<TType extends ShiroEventType>(type: TType, handler: EventHandler<TType>): Disposable {
@@ -66,14 +71,8 @@ class ConsoleEventBus implements EventBus {
   }
 }
 
-const sessionManager = new SessionManager(new InMemorySessionStore());
-const memoryManager = new MemoryManager(new InMemoryMemoryProvider());
-const session = await sessionManager.createSession();
-
 const engine = new Engine({
   events: new ConsoleEventBus(),
-  memoryManager,
-  sessionManager,
 });
 
 engine.use(
@@ -83,23 +82,25 @@ engine.use(
   })
 );
 
+const weatherOutput = z.object({
+  city: z.string(),
+  condition: z.string(),
+  temperature: z.number(),
+});
+
 const agent = new Agent({
   instructions:
-    "You are a concise assistant. Use the conversation history and relevant memory when answering.",
-  name: "Assistant",
+    "You are a concise weather assistant. First answer naturally if unsure, then correct yourself when asked for valid JSON.",
+  name: "Weather Assistant",
+  output: weatherOutput,
   provider: "openai",
 });
 
-const first = await engine.execute(
+const result = await engine.execute(
   agent,
-  "Remember that my Shiro project codename is Sakura. Reply with one short acknowledgement.",
-  { sessionId: session.sessionId }
+  "Give today's sample weather for Pune, India. Use 24 as the temperature and cloudy as the condition."
 );
 
-console.log(`first: ${first.output}`);
-
-const second = await engine.execute(agent, "What is my Shiro project codename?", {
-  sessionId: session.sessionId,
-});
-
-console.log(`second: ${second.output}`);
+console.log(result.output.city);
+console.log(result.output.temperature);
+console.log(result.output.condition);

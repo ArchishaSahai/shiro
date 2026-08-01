@@ -83,6 +83,12 @@ export type {
   MemoryRetrievedEvent,
   MemoryStoredEvent,
   MemoryUpdatedEvent,
+  OutputRepairCompletedEvent,
+  OutputRepairFailedEvent,
+  OutputRepairStartedEvent,
+  OutputValidationFailedEvent,
+  OutputValidationStartedEvent,
+  OutputValidationSucceededEvent,
   ProviderFinishedEvent,
   ProviderStartedEvent,
   RunCompletedEvent,
@@ -137,6 +143,29 @@ export type {
   MemoryWriteContext,
 } from "./memory/index.js";
 export type { Middleware, MiddlewareContext, MiddlewareRunResult } from "./middleware/index.js";
+export {
+  DefaultOutputRepairStrategy,
+  JsonOutputParser,
+  SchemaOutputValidator,
+  StructuredOutputManager,
+} from "./output/index.js";
+export type {
+  InferOutput,
+  OutputParser,
+  OutputRepairRequest,
+  OutputRepairStrategy,
+  OutputSchema,
+  OutputValidationContext,
+  OutputValidator,
+  RetryPolicy,
+  SafeParseResult,
+  StructuredOutputEvents,
+  StructuredOutputManagerConfig,
+  StructuredOutputRequest,
+  StructuredOutputResult,
+  ValidationIssue,
+  ValidationResult,
+} from "./output/index.js";
 export {
   DefaultPluginContext,
   PluginCapability,

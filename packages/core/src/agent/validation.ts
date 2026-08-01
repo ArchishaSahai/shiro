@@ -3,13 +3,13 @@ import type { JsonArray, JsonObject, JsonValue } from "../shared/index.js";
 import type { AgentConfig } from "./agent.js";
 
 type MutableAgentConfig = {
-  -readonly [Key in keyof AgentConfig]: AgentConfig[Key];
+  -readonly [Key in keyof AgentConfig<unknown>]: AgentConfig<unknown>[Key];
 };
 
 /**
  * Validates the public agent configuration contract.
  */
-export function validateAgentConfig(config: AgentConfig): void {
+export function validateAgentConfig(config: AgentConfig<unknown>): void {
   if (!isObject(config)) {
     throwConfigurationError("Agent configuration must be an object.");
   }
@@ -28,12 +28,16 @@ export function validateAgentConfig(config: AgentConfig): void {
   assertOptionalArray(config.tools, "Agent tools must be an array.");
   assertOptionalArray(config.guardrails, "Agent guardrails must be an array.");
   assertOptionalArray(config.middleware, "Agent middleware must be an array.");
+
+  if (config.output !== undefined && typeof config.output.parse !== "function") {
+    throwConfigurationError("Agent output schema must expose a parse function.");
+  }
 }
 
 /**
  * Creates the immutable configuration snapshot stored by Agent.
  */
-export function cloneAgentConfig(config: AgentConfig): AgentConfig {
+export function cloneAgentConfig<TOutput>(config: AgentConfig<TOutput>): AgentConfig<TOutput> {
   const snapshot: Partial<MutableAgentConfig> = {
     instructions: config.instructions,
     name: config.name,
@@ -42,6 +46,10 @@ export function cloneAgentConfig(config: AgentConfig): AgentConfig {
 
   if (config.tools !== undefined) {
     snapshot.tools = Object.freeze([...config.tools]);
+  }
+
+  if (config.output !== undefined) {
+    snapshot.output = config.output;
   }
 
   if (config.guardrails !== undefined) {
@@ -80,7 +88,7 @@ export function cloneAgentConfig(config: AgentConfig): AgentConfig {
     snapshot.metadata = freezeJsonObject(config.metadata);
   }
 
-  return Object.freeze(snapshot) as AgentConfig;
+  return Object.freeze(snapshot) as AgentConfig<TOutput>;
 }
 
 function assertNonEmptyString(value: unknown, message: string): void {

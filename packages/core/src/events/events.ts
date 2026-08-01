@@ -38,6 +38,12 @@ export enum ShiroEventType {
   MemoryRetrieved = "memory.retrieved",
   MemoryCompacted = "memory.compacted",
   ContextPrepared = "context.prepared",
+  OutputValidationStarted = "output.validation.started",
+  OutputValidationSucceeded = "output.validation.succeeded",
+  OutputValidationFailed = "output.validation.failed",
+  OutputRepairStarted = "output.repair.started",
+  OutputRepairCompleted = "output.repair.completed",
+  OutputRepairFailed = "output.repair.failed",
   HandoffRequested = "handoff.requested",
   HandoffCompleted = "handoff.completed",
   RunCompleted = "run.completed",
@@ -223,6 +229,39 @@ export interface ContextPreparedEvent extends BaseShiroEvent {
   readonly messageCount: number;
 }
 
+export interface OutputValidationStartedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.OutputValidationStarted;
+  readonly attempt: number;
+}
+
+export interface OutputValidationSucceededEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.OutputValidationSucceeded;
+  readonly attempt: number;
+}
+
+export interface OutputValidationFailedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.OutputValidationFailed;
+  readonly attempt: number;
+  readonly issueCount: number;
+}
+
+export interface OutputRepairStartedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.OutputRepairStarted;
+  readonly attempt: number;
+  readonly issueCount: number;
+}
+
+export interface OutputRepairCompletedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.OutputRepairCompleted;
+  readonly attempt: number;
+}
+
+export interface OutputRepairFailedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.OutputRepairFailed;
+  readonly attempt: number;
+  readonly error: ShiroError;
+}
+
 export interface HandoffRequestedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.HandoffRequested;
   readonly targetAgent?: string;
@@ -278,6 +317,12 @@ export type ShiroEvent =
   | MemoryRetrievedEvent
   | MemoryCompactedEvent
   | ContextPreparedEvent
+  | OutputValidationStartedEvent
+  | OutputValidationSucceededEvent
+  | OutputValidationFailedEvent
+  | OutputRepairStartedEvent
+  | OutputRepairCompletedEvent
+  | OutputRepairFailedEvent
   | HandoffRequestedEvent
   | HandoffCompletedEvent
   | RunCompletedEvent

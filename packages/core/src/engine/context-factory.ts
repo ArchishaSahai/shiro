@@ -1,5 +1,6 @@
 import type { Agent } from "../agent/index.js";
 import { DefaultContextCompactor, MemoryManager } from "../memory/index.js";
+import { StructuredOutputManager } from "../output/index.js";
 import type { ProviderResolver } from "../provider/index.js";
 import type { EngineContext } from "../runtime/index.js";
 import { SessionManager } from "../session/index.js";
@@ -23,7 +24,7 @@ export class DefaultEngineContextFactory {
   /**
    * Creates the context made available to one runner.
    */
-  create(agent: Agent, options?: RunnerOptions): EngineContext {
+  create(agent: Agent<unknown>, options?: RunnerOptions): EngineContext {
     const metadata = mergeMetadata(this.#services.metadata, agent.metadata, options?.metadata);
 
     const context: Partial<MutableEngineContext> = {
@@ -88,6 +89,8 @@ export class DefaultEngineContextFactory {
     }
 
     context.contextCompactor = this.#services.contextCompactor ?? new DefaultContextCompactor();
+    context.structuredOutputManager =
+      this.#services.structuredOutputManager ?? new StructuredOutputManager();
 
     const tracer = agent.tracer ?? this.#services.tracer;
     if (tracer !== undefined) {
@@ -136,7 +139,7 @@ const agentToolSchema: ToolSchema<AgentToolInput> = Object.freeze({
   },
 });
 
-function toAgentTool(agent: Agent): Tool<AgentToolInput> {
+function toAgentTool(agent: Agent<unknown>): Tool<AgentToolInput> {
   return tool({
     description: `Hand off execution to the ${agent.name} agent.`,
     execute: async (input) => {
@@ -152,7 +155,7 @@ function toAgentTool(agent: Agent): Tool<AgentToolInput> {
   });
 }
 
-function isAgent(value: unknown): value is Agent {
+function isAgent(value: unknown): value is Agent<unknown> {
   return (
     value instanceof Object && "instructions" in value && "provider" in value && "tools" in value
   );
