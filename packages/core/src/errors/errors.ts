@@ -78,6 +78,9 @@ export class MemoryError extends ShiroError {}
 /** A required human approval was rejected. */
 export class ApprovalRejectedError extends ShiroError {}
 
+/** Human approval orchestration failed or denied execution. */
+export class ApprovalError extends ShiroError {}
+
 /** Agent handoff resolution failed. */
 export class HandoffError extends ShiroError {}
 

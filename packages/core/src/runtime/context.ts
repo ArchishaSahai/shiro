@@ -1,3 +1,4 @@
+import type { ApprovalManager } from "../approval/index.js";
 import type { EventBus } from "../events/index.js";
 import type { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import type { MemoryProvider } from "../memory/index.js";
@@ -12,6 +13,7 @@ import type { Tracer } from "../tracing/index.js";
  */
 export interface EngineContext {
   readonly provider: Provider;
+  readonly approvalManager?: ApprovalManager;
   readonly tools?: ToolRegistry;
   readonly toolExecutor?: ToolExecutor;
   readonly agentRegistry?: AgentRegistry;

@@ -239,6 +239,10 @@ function freezeServices(config: EngineConfig): EngineServices {
     services.providerResolver = config.providerResolver;
   }
 
+  if (config.approvalManager !== undefined) {
+    services.approvalManager = config.approvalManager;
+  }
+
   if (config.toolRegistry !== undefined) {
     services.toolRegistry = config.toolRegistry;
   }

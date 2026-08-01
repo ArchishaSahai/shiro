@@ -1,4 +1,5 @@
 import type { Agent, RunResult } from "../agent/index.js";
+import { ApprovalDecisionStatus, type ApprovalContext } from "../approval/index.js";
 import { ConfigurationError, RuntimeError, ShiroError, ShiroErrorCode } from "../errors/index.js";
 import { ShiroEventType, type ShiroEvent } from "../events/index.js";
 import { HandoffDecisionStatus, HandoffManager, type HandoffContext } from "../handoff/index.js";
@@ -10,6 +11,7 @@ import {
   ToolExecutionState,
   ToolExecutor,
   ToolRegistry,
+  ToolSerializer,
   tool,
   type Tool,
   type ToolCall,
@@ -34,6 +36,7 @@ export class Runner {
   #handoffManager: HandoffManager | undefined;
   #toolRegistry: ToolRegistry | undefined;
   #toolExecutor: ToolExecutor | undefined;
+  readonly #toolSerializer = new ToolSerializer();
   #state = RunnerState.Created;
   #stage = PipelineStage.Created;
   #messages: readonly Message[] = [];
@@ -313,6 +316,13 @@ export class Runner {
           toolCall,
         });
 
+        const approvalResult = await this.#approveToolCall(toolCall);
+
+        if (approvalResult !== undefined) {
+          await this.#publishToolResult(approvalResult);
+          return approvalResult;
+        }
+
         const result = await executor.execute(toolCall, this.#toolContext());
         await this.#publishToolResult(result);
         return result;
@@ -350,6 +360,98 @@ export class Runner {
       ...this.#baseEvent(ShiroEventType.ToolFailed),
       result,
     });
+  }
+
+  async #approveToolCall(toolCall: ToolCall): Promise<ToolResult | undefined> {
+    const approvalManager = this.context.engine.approvalManager;
+    const toolEntry = this.#toolRegistry?.resolve(toolCall.name);
+
+    if (approvalManager === undefined || toolEntry === undefined) {
+      return undefined;
+    }
+
+    const approvalContext = this.#approvalContext(toolEntry, toolCall);
+
+    if (!(await approvalManager.requiresApproval(approvalContext))) {
+      return undefined;
+    }
+
+    await this.#publish({
+      ...this.#baseEvent(ShiroEventType.ApprovalRequested),
+      toolCall,
+    });
+
+    const result = await approvalManager.requestApproval(approvalContext);
+    const reason = result.decision.reason;
+
+    if (result.approved) {
+      await this.#publish({
+        ...this.#baseEvent(ShiroEventType.ApprovalGranted),
+        toolCall,
+      });
+      return undefined;
+    }
+
+    if (result.decision.status === ApprovalDecisionStatus.TimedOut) {
+      await this.#publishApprovalDenied(ShiroEventType.ApprovalTimedOut, toolCall, reason);
+    } else if (result.decision.status === ApprovalDecisionStatus.Cancelled) {
+      await this.#publishApprovalDenied(ShiroEventType.ApprovalCancelled, toolCall, reason);
+    } else {
+      await this.#publishApprovalDenied(ShiroEventType.ApprovalRejected, toolCall, reason);
+    }
+
+    return this.#toolSerializer.serialize(
+      toolCall,
+      Object.freeze({
+        approved: false,
+        reason: reason ?? "Approval was not granted.",
+      }),
+      ToolExecutionState.Failed,
+      0
+    );
+  }
+
+  async #publishApprovalDenied(
+    type:
+      | ShiroEventType.ApprovalRejected
+      | ShiroEventType.ApprovalTimedOut
+      | ShiroEventType.ApprovalCancelled,
+    toolCall: ToolCall,
+    reason: string | undefined
+  ): Promise<void> {
+    const event: Partial<MutableApprovalDeniedEvent> = {
+      ...this.#baseEvent(type),
+      toolCall,
+    };
+
+    if (reason !== undefined) {
+      event.reason = reason;
+    }
+
+    await this.#publish(event as MutableApprovalDeniedEvent);
+  }
+
+  #approvalContext(toolEntry: Tool, toolCall: ToolCall): ApprovalContext {
+    const context: Partial<MutableApprovalContext> = {
+      action: toolCall,
+      agentName: this.#activeAgent.name,
+      runId: this.runId,
+      tool: toolEntry,
+    };
+
+    if (this.context.sessionId !== undefined) {
+      context.sessionId = this.context.sessionId;
+    }
+
+    if (this.context.signal !== undefined) {
+      context.signal = this.context.signal;
+    }
+
+    if (this.context.metadata !== undefined) {
+      context.metadata = this.context.metadata;
+    }
+
+    return Object.freeze(context) as ApprovalContext;
   }
 
   #providerContext(): MutableProviderContext {
@@ -594,6 +696,22 @@ type MutableToolContext = {
 type MutableHandoffContext = {
   -readonly [Key in keyof HandoffContext]: HandoffContext[Key];
 };
+
+type MutableApprovalContext = {
+  -readonly [Key in keyof ApprovalContext]: ApprovalContext[Key];
+};
+
+interface MutableApprovalDeniedEvent {
+  type:
+    | ShiroEventType.ApprovalRejected
+    | ShiroEventType.ApprovalTimedOut
+    | ShiroEventType.ApprovalCancelled;
+  runId: string;
+  timestamp: Date;
+  toolCall: ToolCall;
+  reason?: string;
+  metadata?: Metadata;
+}
 
 function toUserMessage(input: RunnerDependencies["input"]): Message {
   if (typeof input !== "string") {

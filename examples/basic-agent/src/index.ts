@@ -3,8 +3,10 @@ import { fileURLToPath } from "node:url";
 
 import {
   Agent,
+  ApprovalDecisionStatus,
+  ApprovalManager,
   Engine,
-  SequentialHandoffStrategy,
+  LocalApprovalProvider,
   ShiroEventType,
   tool,
   type Disposable,
@@ -37,6 +39,14 @@ class ConsoleEventBus implements EventBus {
     if (event.type === ShiroEventType.ToolCompleted) {
       console.log(`tool: ${event.result.name}`);
     }
+
+    if (event.type === ShiroEventType.ApprovalRequested) {
+      console.log(`approval requested: ${event.toolCall.name}`);
+    }
+
+    if (event.type === ShiroEventType.ApprovalGranted) {
+      console.log(`approval granted: ${event.toolCall.name}`);
+    }
   }
 
   subscribe<TType extends ShiroEventType>(type: TType, handler: EventHandler<TType>): Disposable {
@@ -52,6 +62,9 @@ class ConsoleEventBus implements EventBus {
 }
 
 const engine = new Engine({
+  approvalManager: new ApprovalManager({
+    provider: new LocalApprovalProvider(ApprovalDecisionStatus.Granted),
+  }),
   events: new ConsoleEventBus(),
 });
 
@@ -62,79 +75,62 @@ engine.use(
   })
 );
 
-interface WeatherInput extends JsonObject {
-  readonly location: string;
+interface SensitiveInput extends JsonObject {
+  readonly action: string;
 }
 
-const weatherSchema: ToolSchema<WeatherInput> = {
-  parse(input: unknown): WeatherInput {
-    if (!isObject(input) || typeof input.location !== "string") {
-      throw new Error("location is required.");
+const sensitiveSchema: ToolSchema<SensitiveInput> = {
+  parse(input: unknown): SensitiveInput {
+    if (!isObject(input) || typeof input.action !== "string") {
+      throw new Error("action is required.");
     }
 
     return Object.freeze({
-      location: input.location,
+      action: input.action,
     });
   },
   toJSONSchema(): JsonObject {
     return Object.freeze({
       additionalProperties: false,
       properties: Object.freeze({
-        location: Object.freeze({
-          description: "City or region for the weather lookup.",
+        action: Object.freeze({
+          description: "Sensitive action to perform after human approval.",
           type: "string",
         }),
       }),
-      required: Object.freeze(["location"]),
+      required: Object.freeze(["action"]),
       type: "object",
     });
   },
 };
 
-const weatherTool = tool({
-  description: "Returns the current weather for a location.",
-  execute: async ({ location }) => {
+const sensitiveTool = tool({
+  approvalDescription: "Approves a sensitive deployment-style operation.",
+  description: "Performs a sensitive operation that requires human approval.",
+  execute: async ({ action }) => {
     await Promise.resolve();
     return Object.freeze({
-      condition: "sunny",
-      location,
-      temperatureC: 28,
+      action,
+      status: "completed",
     });
   },
-  name: "weather",
-  parameters: weatherSchema,
-});
-
-const researchAgent = new Agent({
-  handoff: new SequentialHandoffStrategy(["Manager"]),
-  instructions:
-    "You are a research agent. Use available tools to collect factual context, then summarize the result briefly.",
-  name: "Research",
-  provider: "openai",
-  tools: [weatherTool],
-});
-
-const securityAgent = new Agent({
-  handoff: new SequentialHandoffStrategy(["Manager"]),
-  instructions:
-    "You are a security review agent. Review the prior messages for obvious safety or reliability concerns, then respond briefly.",
-  name: "Security",
-  provider: "openai",
+  name: "sensitive_operation",
+  parameters: sensitiveSchema,
+  requiresApproval: true,
 });
 
 const agent = new Agent({
-  handoff: new SequentialHandoffStrategy(["Research", "Security"]),
   instructions:
-    "You are the manager agent. Coordinate specialist agents when needed and produce the final response when their work is complete.",
+    "You are the manager agent. Use the sensitive_operation tool when asked to perform a sensitive action, then report the result.",
   name: "Manager",
   provider: "openai",
-  tools: [researchAgent, securityAgent],
+  tools: [sensitiveTool],
 });
 
 const result = await engine.execute(
   agent,
-  "Find today's weather in Pune, have the security agent review the result, then give a final concise answer.",
-  { maxIterations: 12 }
+  "Perform the sensitive action named rotate-demo-secret. Use the tool before answering.",
+  { maxIterations: 6 }
 );
 
 console.log(result.output);

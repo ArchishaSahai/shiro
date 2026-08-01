@@ -1,4 +1,5 @@
 import type { Agent, RunResult } from "../agent/index.js";
+import type { ApprovalManager } from "../approval/index.js";
 import type { EventBus } from "../events/index.js";
 import type { AgentRegistry, HandoffDepthLimiter } from "../handoff/index.js";
 import type { MemoryProvider } from "../memory/index.js";
@@ -24,6 +25,7 @@ export interface EngineServices {
   readonly plugins?: PluginManagerConfig;
   readonly providerRegistry?: ProviderRegistry;
   readonly providerResolver?: ProviderResolver;
+  readonly approvalManager?: ApprovalManager;
   readonly toolRegistry?: ToolRegistry;
   readonly toolExecutor?: ToolExecutor;
   readonly agentRegistry?: AgentRegistry;

@@ -25,6 +25,8 @@ export enum ShiroEventType {
   ApprovalRequested = "approval.requested",
   ApprovalGranted = "approval.granted",
   ApprovalRejected = "approval.rejected",
+  ApprovalTimedOut = "approval.timed_out",
+  ApprovalCancelled = "approval.cancelled",
   GuardrailChecked = "guardrail.checked",
   GuardrailViolated = "guardrail.violated",
   MemoryRead = "memory.read",
@@ -137,10 +139,24 @@ export interface ApprovalRequestedEvent extends BaseShiroEvent {
 
 export interface ApprovalGrantedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ApprovalGranted;
+  readonly toolCall: ToolCallRequest;
 }
 
 export interface ApprovalRejectedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ApprovalRejected;
+  readonly toolCall: ToolCallRequest;
+  readonly reason?: string;
+}
+
+export interface ApprovalTimedOutEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ApprovalTimedOut;
+  readonly toolCall: ToolCallRequest;
+  readonly reason?: string;
+}
+
+export interface ApprovalCancelledEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.ApprovalCancelled;
+  readonly toolCall: ToolCallRequest;
   readonly reason?: string;
 }
 
@@ -207,6 +223,8 @@ export type ShiroEvent =
   | ApprovalRequestedEvent
   | ApprovalGrantedEvent
   | ApprovalRejectedEvent
+  | ApprovalTimedOutEvent
+  | ApprovalCancelledEvent
   | GuardrailCheckedEvent
   | GuardrailViolatedEvent
   | MemoryReadEvent

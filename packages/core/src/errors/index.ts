@@ -1,5 +1,6 @@
 export {
   ApprovalRejectedError,
+  ApprovalError,
   ConfigurationError,
   GuardrailViolationError,
   HandoffError,

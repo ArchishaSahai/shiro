@@ -3,12 +3,27 @@ export type { AgentConfig, AgentOptions, AgentTool, RunOptions, RunResult } from
 export type {
   ApprovalContext,
   ApprovalDecision,
+  ApprovalManagerConfig,
+  ApprovalPolicy,
+  ApprovalProvider,
   ApprovalRequest,
+  ApprovalResponse,
+  ApprovalResult,
   HumanApproval,
 } from "./approval/index.js";
-export { ApprovalDecisionStatus } from "./approval/index.js";
+export {
+  AlwaysApprovePolicy,
+  ApprovalDecisionStatus,
+  ApprovalManager,
+  ApprovalRegistry,
+  CompositeApprovalPolicy,
+  LocalApprovalProvider,
+  NeverApprovePolicy,
+  SensitiveToolApprovalPolicy,
+} from "./approval/index.js";
 export {
   ApprovalRejectedError,
+  ApprovalError,
   ConfigurationError,
   GuardrailViolationError,
   HandoffError,
@@ -49,8 +64,10 @@ export type {
   AgentRegisteredEvent,
   AgentResolvedEvent,
   ApprovalGrantedEvent,
+  ApprovalCancelledEvent,
   ApprovalRejectedEvent,
   ApprovalRequestedEvent,
+  ApprovalTimedOutEvent,
   BaseShiroEvent,
   Disposable,
   EventBus,

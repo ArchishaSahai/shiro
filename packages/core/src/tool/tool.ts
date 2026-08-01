@@ -4,6 +4,7 @@ import {
   ShiroErrorCode,
   TimeoutError,
 } from "../errors/index.js";
+import type { ApprovalPolicy } from "../approval/index.js";
 import type { EngineContext } from "../runtime/index.js";
 import type { JsonObject, JsonValue, Metadata } from "../shared/index.js";
 
@@ -69,6 +70,9 @@ export interface ToolContext {
 export interface Tool<TInput = JsonObject, TOutput = JsonValue> {
   readonly name: string;
   readonly description?: string;
+  readonly requiresApproval?: boolean;
+  readonly approvalPolicy?: ApprovalPolicy;
+  readonly approvalDescription?: string;
   readonly schema: ToolSchema<TInput>;
   execute(input: TInput, context: ToolContext): Promise<TOutput>;
 }
@@ -89,6 +93,9 @@ export interface ToolLogger {
 export interface ToolDefinition<TInput = JsonObject, TOutput = JsonValue> {
   readonly name: string;
   readonly description?: string;
+  readonly requiresApproval?: boolean;
+  readonly approvalPolicy?: ApprovalPolicy;
+  readonly approvalDescription?: string;
   readonly parameters: ToolSchema<TInput>;
   execute(input: TInput, context: ToolContext): Promise<TOutput>;
 }
@@ -279,18 +286,34 @@ export class ToolSerializer {
 export function tool<TInput = JsonObject, TOutput = JsonValue>(
   definition: ToolDefinition<TInput, TOutput>
 ): Tool<TInput, TOutput> {
-  const created: Tool<TInput, TOutput> = {
+  const created: Partial<MutableTool<TInput, TOutput>> = {
     execute: (input, context) => definition.execute(input, context),
     name: definition.name,
     schema: definition.parameters,
   };
 
   if (definition.description !== undefined) {
-    return Object.freeze({ ...created, description: definition.description });
+    created.description = definition.description;
   }
 
-  return Object.freeze(created);
+  if (definition.requiresApproval !== undefined) {
+    created.requiresApproval = definition.requiresApproval;
+  }
+
+  if (definition.approvalPolicy !== undefined) {
+    created.approvalPolicy = definition.approvalPolicy;
+  }
+
+  if (definition.approvalDescription !== undefined) {
+    created.approvalDescription = definition.approvalDescription;
+  }
+
+  return Object.freeze(created) as Tool<TInput, TOutput>;
 }
+
+type MutableTool<TInput, TOutput> = {
+  -readonly [Key in keyof Tool<TInput, TOutput>]: Tool<TInput, TOutput>[Key];
+};
 
 /**
  * Validates a tool definition.

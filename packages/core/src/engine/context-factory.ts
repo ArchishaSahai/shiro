@@ -27,6 +27,10 @@ export class DefaultEngineContextFactory {
     const context: Partial<MutableEngineContext> = {
       provider: this.#providerResolver.resolve(agent.provider),
     };
+
+    if (this.#services.approvalManager !== undefined) {
+      context.approvalManager = this.#services.approvalManager;
+    }
     const tools = new ToolRegistry([
       ...(this.#services.toolRegistry?.list() ?? []),
       ...agent.tools.map((entry) => {
