@@ -4,8 +4,11 @@ import { z } from "zod";
 
 import {
   Agent,
+  ConsoleTraceExporter,
   Engine,
+  JsonTraceExporter,
   ShiroEventType,
+  TraceManager,
   type Disposable,
   type EventBus,
   type EventHandler,
@@ -71,8 +74,12 @@ class ConsoleEventBus implements EventBus {
   }
 }
 
-const engine = new Engine({
+const traceManager = new TraceManager({
   events: new ConsoleEventBus(),
+});
+
+const engine = new Engine({
+  events: traceManager,
 });
 
 engine.use(
@@ -104,3 +111,7 @@ const result = await engine.execute(
 console.log(result.output.city);
 console.log(result.output.temperature);
 console.log(result.output.condition);
+
+await traceManager.export(new ConsoleTraceExporter());
+const traceJson = await traceManager.export(new JsonTraceExporter());
+console.log(traceJson);

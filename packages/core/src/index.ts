@@ -94,6 +94,8 @@ export type {
   RunCompletedEvent,
   RunFailedEvent,
   RunStartedEvent,
+  SpanCompletedEvent,
+  SpanStartedEvent,
   ShiroEvent,
   SessionCreatedEvent,
   SessionLoadedEvent,
@@ -104,6 +106,10 @@ export type {
   ToolRequestedEvent,
   ToolStartedEvent,
   ToolTimedOutEvent,
+  TraceCompletedEvent,
+  TraceExportedEvent,
+  TraceStartedEvent,
+  TraceUpdatedEvent,
 } from "./events/index.js";
 export { GuardrailDecision, GuardrailStage } from "./guardrails/index.js";
 export type { Guardrail, GuardrailContext, GuardrailResult } from "./guardrails/index.js";
@@ -245,4 +251,33 @@ export type {
   ToolResult,
   ToolSchema,
 } from "./tool/index.js";
-export type { TraceAttributes, Tracer, TraceSpan } from "./tracing/index.js";
+export {
+  ConsoleTraceExporter,
+  InMemoryTraceStore,
+  JsonTraceExporter,
+  TraceManager,
+  TraceSpanCategory,
+  TraceSpanStatus,
+  TraceStatus,
+} from "./tracing/index.js";
+export type {
+  ApprovalTrace,
+  HandoffTrace,
+  MemoryTrace,
+  ModelCallTrace,
+  RunTrace,
+  TokenUsage,
+  ToolExecutionTrace,
+  TraceAttributes,
+  TraceEvent,
+  TraceExporter,
+  TraceFilter,
+  TraceManagerConfig,
+  TraceSnapshot,
+  TraceSpan,
+  TraceSpanHandle,
+  TraceStatistics,
+  TraceStore,
+  TraceTimeline,
+  Tracer,
+} from "./tracing/index.js";

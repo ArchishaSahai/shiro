@@ -1,6 +1,6 @@
 import type { ShiroError } from "../errors/index.js";
 import type { Message, Metadata } from "../shared/index.js";
-import type { ToolCallRequest, ToolCallResult } from "../tool/index.js";
+import type { ToolCallRequest, ToolResult } from "../tool/index.js";
 
 /**
  * Stable event names emitted by Shiro.
@@ -48,6 +48,12 @@ export enum ShiroEventType {
   HandoffCompleted = "handoff.completed",
   RunCompleted = "run.completed",
   RunFailed = "run.failed",
+  TraceStarted = "trace.started",
+  TraceUpdated = "trace.updated",
+  SpanStarted = "trace.span.started",
+  SpanCompleted = "trace.span.completed",
+  TraceCompleted = "trace.completed",
+  TraceExported = "trace.exported",
 }
 
 /**
@@ -127,22 +133,22 @@ export interface ToolRequestedEvent extends BaseShiroEvent {
 
 export interface ToolFinishedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ToolFinished;
-  readonly result: ToolCallResult;
+  readonly result: ToolResult;
 }
 
 export interface ToolCompletedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ToolCompleted;
-  readonly result: ToolCallResult;
+  readonly result: ToolResult;
 }
 
 export interface ToolFailedEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ToolFailed;
-  readonly result: ToolCallResult;
+  readonly result: ToolResult;
 }
 
 export interface ToolTimedOutEvent extends BaseShiroEvent {
   readonly type: ShiroEventType.ToolTimedOut;
-  readonly result: ToolCallResult;
+  readonly result: ToolResult;
 }
 
 export interface ApprovalRequestedEvent extends BaseShiroEvent {
@@ -281,6 +287,32 @@ export interface RunFailedEvent extends BaseShiroEvent {
   readonly error: ShiroError;
 }
 
+export interface TraceStartedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.TraceStarted;
+}
+
+export interface TraceUpdatedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.TraceUpdated;
+}
+
+export interface SpanStartedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.SpanStarted;
+  readonly spanId: string;
+}
+
+export interface SpanCompletedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.SpanCompleted;
+  readonly spanId: string;
+}
+
+export interface TraceCompletedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.TraceCompleted;
+}
+
+export interface TraceExportedEvent extends BaseShiroEvent {
+  readonly type: ShiroEventType.TraceExported;
+}
+
 /**
  * Union of all public Shiro event payloads.
  */
@@ -326,7 +358,13 @@ export type ShiroEvent =
   | HandoffRequestedEvent
   | HandoffCompletedEvent
   | RunCompletedEvent
-  | RunFailedEvent;
+  | RunFailedEvent
+  | TraceStartedEvent
+  | TraceUpdatedEvent
+  | SpanStartedEvent
+  | SpanCompletedEvent
+  | TraceCompletedEvent
+  | TraceExportedEvent;
 
 /**
  * Event payload narrowed by event type.

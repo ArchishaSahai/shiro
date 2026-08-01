@@ -38,6 +38,8 @@ export type {
   RunCompletedEvent,
   RunFailedEvent,
   RunStartedEvent,
+  SpanCompletedEvent,
+  SpanStartedEvent,
   ShiroEvent,
   SessionCreatedEvent,
   SessionLoadedEvent,
@@ -48,4 +50,8 @@ export type {
   ToolRequestedEvent,
   ToolStartedEvent,
   ToolTimedOutEvent,
+  TraceCompletedEvent,
+  TraceExportedEvent,
+  TraceStartedEvent,
+  TraceUpdatedEvent,
 } from "./events.js";

@@ -1,1 +1,30 @@
-export type { TraceAttributes, Tracer, TraceSpan } from "./tracer.js";
+export {
+  ConsoleTraceExporter,
+  InMemoryTraceStore,
+  JsonTraceExporter,
+  TraceManager,
+  TraceSpanCategory,
+  TraceSpanStatus,
+  TraceStatus,
+} from "./tracer.js";
+export type {
+  ApprovalTrace,
+  HandoffTrace,
+  MemoryTrace,
+  ModelCallTrace,
+  RunTrace,
+  TokenUsage,
+  ToolExecutionTrace,
+  TraceAttributes,
+  TraceEvent,
+  TraceExporter,
+  TraceFilter,
+  TraceManagerConfig,
+  TraceSnapshot,
+  TraceSpan,
+  TraceSpanHandle,
+  TraceStatistics,
+  TraceStore,
+  TraceTimeline,
+  Tracer,
+} from "./tracer.js";
