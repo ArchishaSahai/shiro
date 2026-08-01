@@ -1,0 +1,58 @@
+---
+title: Architecture
+description: Understand the Shiro execution architecture and extension boundaries.
+---
+
+# Architecture
+
+Shiro keeps orchestration cohesive without making any single object responsible for everything.
+
+```txt
+Engine
+  |
+  v
+Runner
+  |
+  v
+Execution Loop
+  |
+  v
+Provider
+  |
+  v
+Tool Loop
+  |
+  v
+Handoff
+  |
+  v
+Approval
+  |
+  v
+Memory
+  |
+  v
+Structured Output
+  |
+  v
+Tracing
+```
+
+## Engine
+
+`Engine` owns long-lived services: provider registry, plugin manager, shared tool registry,
+agent registry, memory/session services, approval services, and event buses.
+
+It does not execute providers or tools.
+
+## Runner
+
+`Runner` owns one execution. It coordinates state transitions, messages, tools, handoffs,
+approval, memory loading/persistence, and final output validation.
+
+It is created by `Engine.execute()` and is not manually managed by application code.
+
+## Events and Traces
+
+Runner emits lifecycle events. `TraceManager` listens to those events and builds trace snapshots.
+This keeps tracing provider-independent and avoids coupling observability to the execution loop.

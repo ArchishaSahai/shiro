@@ -1,0 +1,70 @@
+---
+title: Examples
+description: Practical Shiro examples.
+---
+
+# Examples
+
+## Simple Chat Agent
+
+```ts
+const result = await engine.execute(agent, "Explain agents in one sentence.");
+```
+
+## Weather Tool
+
+```ts
+const weather = tool({
+  name: "weather",
+  description: "Get weather for a city.",
+  parameters: z.object({ city: z.string() }),
+  execute: async ({ city }) => ({ city, temperature: 24, condition: "cloudy" }),
+});
+```
+
+## Multi-Agent Workflow
+
+```ts
+const manager = new Agent({
+  name: "Manager",
+  instructions: "Delegate research tasks.",
+  provider: "openai",
+  tools: [researchAgent],
+});
+```
+
+## Human Approval
+
+```ts
+const sensitive = tool({
+  name: "deploy",
+  requiresApproval: true,
+  parameters: z.object({ environment: z.string() }),
+  execute: async ({ environment }) => ({ deployed: environment }),
+});
+```
+
+## Structured Output
+
+```ts
+const output = z.object({
+  city: z.string(),
+  temperature: z.number(),
+});
+```
+
+## Memory Session
+
+```ts
+await engine.execute(agent, "Remember Sakura.", { sessionId });
+await engine.execute(agent, "What did I ask you to remember?", { sessionId });
+```
+
+## Tracing Example
+
+```ts
+const traceManager = new TraceManager();
+const engine = new Engine({ events: traceManager });
+await engine.execute(agent, "Hello");
+console.log(await traceManager.export(new JsonTraceExporter()));
+```

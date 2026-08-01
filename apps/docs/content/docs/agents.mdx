@@ -1,0 +1,33 @@
+---
+title: Agents
+description: Define immutable agent configuration.
+---
+
+# Agents
+
+Agents are configuration objects. They do not execute work directly.
+
+```ts
+import { Agent } from "@shiro/core";
+
+const agent = new Agent({
+  name: "Assistant",
+  instructions: "You are concise and helpful.",
+  provider: "openai",
+});
+```
+
+## Builder API
+
+```ts
+const agent = Agent.builder()
+  .name("Assistant")
+  .instructions("You are concise and helpful.")
+  .provider("openai")
+  .build();
+```
+
+## Immutability
+
+Agent configuration is validated and frozen at construction. This makes agents safe to reuse across
+runs, sessions, and handoffs.

@@ -1,0 +1,30 @@
+---
+title: Runner
+description: The per-execution orchestration object.
+---
+
+# Runner
+
+`Runner` represents exactly one execution. Developers normally do not instantiate it directly.
+
+## Lifecycle
+
+```txt
+Created
+  -> Initializing
+  -> Running
+  -> Completed | Failed | Cancelled
+```
+
+Runner owns per-run state:
+
+- run context
+- active agent
+- message list
+- current session snapshot
+- retrieved memory
+- current provider response
+- iteration count
+
+Runner delegates to providers, tool executors, approval managers, handoff managers, memory managers,
+and structured output managers.

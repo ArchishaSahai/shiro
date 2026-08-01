@@ -1,0 +1,54 @@
+---
+title: API Reference
+description: Major public classes and contracts.
+---
+
+# API Reference
+
+## Agent
+
+Immutable public definition for an agent. Owns configuration only.
+
+## AgentBuilder
+
+Fluent builder that produces immutable `Agent` instances.
+
+## Engine
+
+Long-lived orchestration service and public execution entrypoint.
+
+## Tool
+
+Typed executable capability callable by a model.
+
+## Plugin
+
+Installable extension that registers capabilities through `PluginContext`.
+
+## Provider
+
+Framework-agnostic interface for model providers.
+
+## MemoryProvider
+
+Storage abstraction for memory entries.
+
+## SessionStore
+
+Storage abstraction for session state.
+
+## TraceManager
+
+Event-driven trace builder and trace event bus.
+
+## ApprovalManager
+
+Coordinates approval policy evaluation and approval provider calls.
+
+## HandoffManager
+
+Coordinates safe agent handoff transitions.
+
+## OutputSchema
+
+Minimal schema contract for final output validation. Zod schemas satisfy it directly.

@@ -1,0 +1,24 @@
+---
+title: Human-in-the-Loop
+description: Require approval before sensitive tool execution.
+---
+
+# Human-in-the-Loop
+
+Tools can require approval before execution.
+
+```ts
+const deploy = tool({
+  name: "deploy",
+  description: "Deploy the current project.",
+  requiresApproval: true,
+  approvalDescription: "Deploying changes affects production.",
+  parameters: z.object({
+    environment: z.string(),
+  }),
+  execute: async ({ environment }) => ({ deployed: true, environment }),
+});
+```
+
+The runner delegates approval to `ApprovalManager`. UI providers such as Studio, Slack, Browser,
+or REST approval can implement `ApprovalProvider` without changing the runner.

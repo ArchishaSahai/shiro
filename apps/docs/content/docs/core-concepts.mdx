@@ -1,0 +1,36 @@
+---
+title: Core Concepts
+description: The core concepts behind Shiro.
+---
+
+# Core Concepts
+
+## Agent
+
+An `Agent` is immutable configuration: name, instructions, provider, tools, memory, handoff
+strategy, approval behavior, and optional output schema.
+
+## Engine
+
+An `Engine` is the service container and public execution entrypoint.
+
+## Runner
+
+A `Runner` is one execution. It is internal to orchestration.
+
+## Provider
+
+A provider adapts an LLM vendor to Shiro's `Provider` interface.
+
+## Tool
+
+A tool is a typed callable capability exposed to a model.
+
+## Plugin
+
+A plugin registers providers, tools, middleware, guardrails, memory, approval, tracing, and
+future Studio extensions through `PluginContext`.
+
+## Event
+
+Events are facts emitted by execution. They power tracing, diagnostics, Studio, and logs.

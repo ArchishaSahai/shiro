@@ -1,0 +1,34 @@
+---
+title: Memory & Sessions
+description: Persist conversation state and retrieve relevant memory.
+---
+
+# Memory & Sessions
+
+Sessions store conversation state. Memory stores retrievable knowledge.
+
+```ts
+import {
+  Engine,
+  InMemoryMemoryProvider,
+  InMemorySessionStore,
+  MemoryManager,
+  SessionManager,
+} from "@shiro/core";
+
+const sessionManager = new SessionManager(new InMemorySessionStore());
+const memoryManager = new MemoryManager(new InMemoryMemoryProvider());
+
+const engine = new Engine({
+  memoryManager,
+  sessionManager,
+});
+
+const session = await sessionManager.createSession();
+
+await engine.execute(agent, "Remember my project codename is Sakura.", {
+  sessionId: session.sessionId,
+});
+```
+
+Redis, SQLite, PostgreSQL, MongoDB, and vector memory can be added later through storage adapters.

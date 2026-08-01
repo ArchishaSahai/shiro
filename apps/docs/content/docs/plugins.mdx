@@ -1,0 +1,26 @@
+---
+title: Plugins
+description: Extend Shiro without modifying core.
+---
+
+# Plugins
+
+Plugins register capabilities through `PluginContext`.
+
+```ts
+engine.use(new OpenAIPlugin({ apiKey: process.env.OPENAI_API_KEY! }));
+```
+
+Plugins may contribute:
+
+- providers
+- tools
+- middleware
+- guardrails
+- memory providers
+- event listeners
+- tracers
+- approval integrations
+- Studio extensions
+
+Plugins do not receive direct access to `Engine` internals.

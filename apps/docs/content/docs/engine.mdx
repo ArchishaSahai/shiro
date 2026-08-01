@@ -1,0 +1,27 @@
+---
+title: Engine
+description: The long-lived orchestration service.
+---
+
+# Engine
+
+`Engine` owns shared execution services and exposes the public execution entrypoint.
+
+```ts
+const engine = new Engine();
+const result = await engine.execute(agent, "Hello");
+```
+
+## Responsibilities
+
+- install plugins
+- own registries
+- create runners
+- resolve providers
+- expose execution
+- hold shared services
+
+## Non-Responsibilities
+
+Engine does not contain the execution loop, call providers directly, execute tools, or implement
+memory, tracing, approval, or handoff behavior.

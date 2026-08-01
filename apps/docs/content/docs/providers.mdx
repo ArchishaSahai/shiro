@@ -1,0 +1,37 @@
+---
+title: Providers
+description: Add LLM vendors through provider plugins.
+---
+
+# Providers
+
+Providers adapt model vendors to Shiro.
+
+```ts
+export interface Provider {
+  readonly name: string;
+  generate(request: ProviderRequest, context: ProviderContext): Promise<ProviderResponse>;
+  stream?(request: ProviderRequest, context: ProviderContext): AsyncIterable<ProviderResponse>;
+}
+```
+
+## OpenAI
+
+```ts
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
+```
+
+Agents reference providers by name.
+
+```ts
+const agent = new Agent({
+  name: "Assistant",
+  instructions: "You are helpful.",
+  provider: "openai",
+});
+```

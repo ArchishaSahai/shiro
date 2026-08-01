@@ -1,0 +1,29 @@
+{
+  "title": "Shiro",
+  "pages": [
+    "index",
+    "installation",
+    "quick-start",
+    "architecture",
+    "core-concepts",
+    "agents",
+    "engine",
+    "runner",
+    "execution-pipeline",
+    "providers",
+    "plugins",
+    "tools",
+    "multi-agent",
+    "human-in-the-loop",
+    "memory-sessions",
+    "structured-outputs",
+    "tracing",
+    "streaming",
+    "error-handling",
+    "examples",
+    "cli",
+    "api-reference",
+    "contributing",
+    "roadmap"
+  ]
+}

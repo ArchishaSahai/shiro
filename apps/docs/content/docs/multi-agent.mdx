@@ -1,0 +1,26 @@
+---
+title: Multi-Agent
+description: Coordinate multiple agents with handoffs.
+---
+
+# Multi-Agent
+
+Every Shiro agent uses the same `Agent` class. There are no manager or specialist subclasses.
+An agent becomes a coordinator by having handoffs and agent tools configured.
+
+```ts
+const researchAgent = new Agent({
+  name: "Research",
+  instructions: "Research technical details.",
+  provider: "openai",
+});
+
+const manager = new Agent({
+  name: "Manager",
+  instructions: "Coordinate the workflow.",
+  provider: "openai",
+  tools: [researchAgent],
+});
+```
+
+The existing runner loop continues after handoff. Shiro does not create a second execution engine.

@@ -1,0 +1,30 @@
+---
+title: Contributing
+description: How to contribute to Shiro.
+---
+
+# Contributing
+
+Shiro is designed for long-term open-source maintenance.
+
+## Local Development
+
+```bash
+pnpm install
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+## Contribution Guidelines
+
+- Keep public APIs small and intentional.
+- Prefer extension points over framework coupling.
+- Add tests for behavior and contracts.
+- Avoid provider-specific logic in core.
+- Preserve strict TypeScript safety.
+
+## Documentation
+
+Docs should explain the user-facing workflow before implementation details.

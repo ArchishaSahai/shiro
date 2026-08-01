@@ -1,0 +1,31 @@
+---
+title: Structured Outputs
+description: Validate final model output with schemas.
+---
+
+# Structured Outputs
+
+Agents can define a final output schema.
+
+```ts
+import { z } from "zod";
+
+const agent = new Agent({
+  name: "Weather Assistant",
+  instructions: "Return weather data.",
+  provider: "openai",
+  output: z.object({
+    city: z.string(),
+    temperature: z.number(),
+    condition: z.string(),
+  }),
+});
+
+const result = await engine.execute(agent, "Weather in Pune");
+
+result.output.city;
+result.output.temperature;
+```
+
+Shiro parses the final response, validates it, and asks the provider to repair invalid output until
+validation succeeds or the retry policy is exhausted.

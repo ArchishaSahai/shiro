@@ -1,0 +1,32 @@
+---
+title: Tracing
+description: Capture execution traces for observability and Studio.
+---
+
+# Tracing
+
+`TraceManager` consumes Shiro lifecycle events and builds immutable run traces.
+
+```ts
+import { ConsoleTraceExporter, JsonTraceExporter, TraceManager } from "@shiro/core";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+
+await engine.execute(agent, "Hello");
+
+await traces.export(new ConsoleTraceExporter());
+const json = await traces.export(new JsonTraceExporter());
+```
+
+Traces include:
+
+- provider calls
+- tool executions
+- memory and session activity
+- handoffs
+- approvals
+- structured output validation and repair
+- timeline events and spans
+
+Future OpenTelemetry, Jaeger, Langfuse, and Phoenix integrations can implement `TraceExporter`.

@@ -1,0 +1,37 @@
+---
+title: Tools
+description: Define callable capabilities for agents.
+---
+
+# Tools
+
+Tools are typed functions exposed to models.
+
+```ts
+import { tool } from "@shiro/core";
+import { z } from "zod";
+
+const weather = tool({
+  name: "weather",
+  description: "Get weather for a city.",
+  parameters: z.object({
+    city: z.string(),
+  }),
+  execute: async ({ city }) => ({
+    city,
+    temperature: 24,
+    condition: "cloudy",
+  }),
+});
+```
+
+Attach tools to an agent:
+
+```ts
+const agent = new Agent({
+  name: "Weather Assistant",
+  instructions: "Use tools when useful.",
+  provider: "openai",
+  tools: [weather],
+});
+```

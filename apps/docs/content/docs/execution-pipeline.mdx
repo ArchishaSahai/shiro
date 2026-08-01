@@ -1,0 +1,32 @@
+---
+title: Execution Pipeline
+description: The execution flow from input to final response.
+---
+
+# Execution Pipeline
+
+```txt
+Initialize
+  -> Validate
+  -> Resolve Provider
+  -> Load Session
+  -> Retrieve Memory
+  -> Prepare Messages
+  -> Provider Loop
+  -> Tool Execution
+  -> Handoff Evaluation
+  -> Structured Output Validation
+  -> Persist Session
+  -> Persist Memory
+  -> Finalize
+```
+
+The provider loop is iterative. If the model requests tools, Shiro executes them, appends results,
+and calls the provider again until a final answer is produced or the maximum iteration count is
+reached.
+
+```ts
+await engine.execute(agent, "What is the weather in Pune?", {
+  maxIterations: 8,
+});
+```

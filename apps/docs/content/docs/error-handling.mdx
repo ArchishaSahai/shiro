@@ -1,0 +1,26 @@
+---
+title: Error Handling
+description: Understand Shiro's error hierarchy.
+---
+
+# Error Handling
+
+Shiro maps framework and integration failures into typed error classes.
+
+- `ConfigurationError`
+- `ValidationError`
+- `RuntimeError`
+- `ProviderError`
+- `ToolExecutionError`
+- `ToolNotFoundError`
+- `GuardrailViolationError`
+- `SessionError`
+- `MemoryError`
+- `ApprovalError`
+- `ApprovalRejectedError`
+- `HandoffError`
+- `MiddlewareError`
+- `PluginError`
+- `TimeoutError`
+
+Provider packages should never leak raw SDK errors. They should map failures into Shiro errors.

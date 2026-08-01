@@ -1,0 +1,51 @@
+---
+title: Introduction
+description: Build production-ready TypeScript agents with Shiro.
+---
+
+# Shiro
+
+Shiro is a production-ready TypeScript Agent SDK for building reliable AI systems.
+It abstracts the orchestration layer so application developers can focus on
+instructions, tools, and business logic.
+
+Shiro manages the hard parts:
+
+- execution lifecycle
+- provider abstraction
+- tool loops
+- multi-agent handoffs
+- human approval
+- sessions and memory
+- structured outputs
+- tracing and observability
+
+## Design Goals
+
+Shiro is designed around a few stable ideas:
+
+- **Small public surface**: public contracts are explicit and framework-owned.
+- **Provider independence**: OpenAI, Anthropic, Gemini, Ollama, and other providers plug in.
+- **Typed developer experience**: tools and structured outputs preserve TypeScript inference.
+- **Event-driven extension**: tracing, Studio, CLI, and integrations consume lifecycle events.
+- **Composable safety**: approval, guardrails, memory, and validation are execution stages.
+
+## Mental Model
+
+```txt
+Developer
+  |
+  v
+Agent
+  |
+  v
+Engine
+  |
+  v
+Runner
+  |
+  v
+Provider + Tools + Memory + Approval + Handoffs + Tracing
+```
+
+Start with [Installation](/docs/installation), then run the [Quick Start](/docs/quick-start).

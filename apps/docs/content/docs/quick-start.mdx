@@ -1,0 +1,51 @@
+---
+title: Quick Start
+description: Create an engine, install OpenAI, define an agent, and execute a run.
+---
+
+# Quick Start
+
+This example performs one real model execution through Shiro.
+
+```ts
+import { Agent, Engine } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
+import { config as loadEnv } from "dotenv";
+
+loadEnv();
+
+const engine = new Engine();
+
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: process.env.OPENAI_MODEL ?? "gpt-5",
+  })
+);
+
+const agent = new Agent({
+  name: "Assistant",
+  instructions: "You are a helpful AI assistant.",
+  provider: "openai",
+});
+
+const result = await engine.execute(agent, "Hello!");
+
+console.log(result.output);
+```
+
+## What Happens
+
+```txt
+engine.execute(agent, input)
+  -> create Runner
+  -> prepare context
+  -> resolve provider
+  -> call provider
+  -> validate final output
+  -> persist memory/session when configured
+  -> emit traceable lifecycle events
+  -> return RunResult
+```
+
+`Engine` is long-lived. Each call creates a new `Runner`.
