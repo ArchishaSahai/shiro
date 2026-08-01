@@ -10,15 +10,16 @@
     "pnpm": ">=11.0.0"
   },
   "scripts": {
-    "build": "turbo run build",
+    "build": "pnpm source:docs && turbo run build",
     "changeset": "changeset",
     "clean": "turbo run clean",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "pnpm source:docs && eslint .",
     "prepare": "husky",
+    "source:docs": "pnpm --filter @shiro/docs source",
     "test": "turbo run test",
-    "typecheck": "tsc -b"
+    "typecheck": "pnpm source:docs && tsc -b"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml}": [

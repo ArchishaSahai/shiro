@@ -14,6 +14,8 @@ export default tseslint.config(
       "eslint.config.js",
       "apps/docs/next-env.d.ts",
       "apps/docs/next.config.mjs",
+      "apps/studio/next-env.d.ts",
+      "apps/studio/next.config.mjs",
     ],
   },
   js.configs.recommended,

@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #f7f7f7;
+  color: #050505;
+}
+
+::selection {
+  background: #050505;
+  color: #fff;
+}
+
+.react-flow__node {
+  border-radius: 8px;
+}
+
+.react-flow__handle {
+  background: #050505;
+}
