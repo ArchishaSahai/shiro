@@ -5,13 +5,13 @@
   "description": "Production-ready TypeScript Agent SDK.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/shiro-sdk/shiro#readme",
+  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shiro-sdk/shiro.git"
+    "url": "git+https://github.com/ArchishaSahai/shiro.git"
   },
   "bugs": {
-    "url": "https://github.com/shiro-sdk/shiro/issues"
+    "url": "https://github.com/ArchishaSahai/shiro/issues"
   },
   "keywords": [
     "ai",

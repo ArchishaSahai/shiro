@@ -1,17 +1,17 @@
 {
   "name": "@shiro/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Core SDK package for Shiro.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/shiro-sdk/shiro#readme",
+  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shiro-sdk/shiro.git",
+    "url": "git+https://github.com/ArchishaSahai/shiro.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/shiro-sdk/shiro/issues"
+    "url": "https://github.com/ArchishaSahai/shiro/issues"
   },
   "keywords": [
     "ai",
@@ -44,6 +44,8 @@
   },
   "devDependencies": {
     "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
     "zod": "^4.0.0"
   }
 }

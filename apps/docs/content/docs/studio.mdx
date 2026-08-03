@@ -1,13 +1,13 @@
 ---
 title: Studio
-description: Terminal-first workspace for timelines, graphs, tools, memory, approvals, and trace replay.
+description: Inspect runs with timelines, graphs, tools, memory, approvals, metrics, and traces.
 ---
 
 # Studio
 
 Studio is how you **see** a Shiro run. It is not a second orchestrator and not a chatbot. It
-consumes the same event stream the runtime emits — provider calls, tool spans, handoffs,
-approvals, memory writes, metrics — and turns that stream into panels operators can navigate.
+loads sample traces (and imported JSON exports) so you can navigate timelines, graphs, tools,
+approvals, memory, metrics, and raw events while you build agents.
 
 If [Tracing](/docs/tracing) is the source of truth, Studio is the workspace built on top of it.
 
@@ -20,146 +20,56 @@ Text logs answer “did something fail?” They rarely answer:
 - What memory was loaded before the second model call?
 - Which handoff changed the active agent?
 
-Studio exists so those questions have a UI. You build with the same events you will debug with
-in production.
-
 ## What Studio is (and is not)
 
-| Studio is                          | Studio is not                 |
-| ---------------------------------- | ----------------------------- |
-| An observer of runtime events      | An execution engine           |
-| A timeline + graph + inspectors    | A replacement for your app UI |
-| A place to replay and compare runs | A prompt playground           |
-
-## Mental model
-
-```txt
-Engine / Runner
-      │
-      │  events + traces
-      ▼
- Event stream
-      │
-      ├── Terminal (command + streamed lines)
-      ├── Timeline
-      ├── Execution graph
-      ├── Tool inspector
-      ├── Memory explorer
-      ├── Approval center
-      ├── Metrics
-      └── Trace viewer
-```
-
-Every panel should update from the **same** stream. When the real SDK is wired end-to-end,
-replacing mock replay with live engine events should not require redesigning the panels.
+| Studio is                        | Studio is not                 |
+| -------------------------------- | ----------------------------- |
+| An observer of runs and traces   | An execution engine           |
+| A timeline + graph + inspectors  | A replacement for your app UI |
+| A place to load and compare runs | A prompt playground           |
 
 ## Launching Studio
 
-### From the CLI
+### From a scaffolded project
 
 ```bash
-shiro dev
-# optional: shiro dev --port 3001
+pnpm add -D @shiro/cli @shiro/studio
+pnpm studio
+# or
+pnpm exec shiro dev --port 3001
 ```
-
-`shiro dev` runs project diagnostics, then launches the Studio app. See [CLI](/docs/cli).
 
 ### From the monorepo
 
 ```bash
 pnpm --filter @shiro/studio dev
+# or
+pnpm exec shiro dev
 ```
 
-## Terminal-first workflow
+## Workspace layout
 
-Studio’s primary surface is a terminal panel, not a chat box. You drive runs with commands:
+The shipped Studio UI is a dashboard:
 
-```bash
-shiro run support-agent
-shiro run examples/customer-support
-shiro replay traces/customer-refund
-```
+| Area           | Role                                           |
+| -------------- | ---------------------------------------------- |
+| Sidebar        | Jump to Sessions, Runs, Tracing, Graph, …      |
+| Run explorer   | Select among loaded / sample runs              |
+| Metrics        | Tokens, cost, latency, provider/tool timings   |
+| Execution log  | Chronological event lines for the selected run |
+| Timeline       | Ordered spans (provider, tool, handoff, …)     |
+| Graph          | Agent / tool / approval nodes for the run      |
+| Tool inspector | Arguments, status, and results for tool calls  |
+| Approvals      | Policy and decision details                    |
+| Memory         | Session / memory records for the run           |
+| Trace viewer   | Searchable events and span details             |
 
-As the command executes, the terminal streams lifecycle lines:
+Use **Import** in the header to load a JSON trace export produced by `JsonTraceExporter`.
 
-```txt
-$ shiro run support-agent
-✓ Engine started
-→ Loading providers...
-✓ OpenAI connected
-→ Calling support agent...
-→ Tool lookupInvoice()
-✓ invoice found
-→ Handoff → billing
-→ Approval requested
-✓ Approved
-→ Response generated
-✓ Run completed (2.4s)
-```
+## Sample traces
 
-Assistant output in the terminal is rendered as Markdown (headings, lists, tables, code, task
-lists) — the same expectations you have from ChatGPT- or Claude-style assistant UIs.
-
-While lines stream, other panels update live. You should not wait for “run completed” to see
-the timeline grow or a tool appear in the inspector.
-
-## Panels
-
-### Timeline
-
-Ordered spans for the run: provider, tool, handoff, approval, memory.
-
-Use it to answer:
-
-- Where did time go?
-- Did memory load before the provider call?
-- Was the approval before or after the tool started?
-
-> **TODO:** Add screenshot — Studio timeline with a support-agent run.
-
-### Execution graph
-
-Nodes for agents, providers, tools, approvals, and memory. Edges follow the run’s structure.
-Nodes activate as events arrive — useful for multi-agent handoffs.
-
-> **TODO:** Add screenshot — execution graph mid-handoff.
-
-### Tool inspector
-
-Arguments, status, duration, and serialized result for the active tool call. This is usually
-the fastest way to catch a wrong `invoiceId` or an empty tool payload.
-
-> **TODO:** Add screenshot — tool inspector showing lookupInvoice args/result.
-
-### Memory explorer
-
-Session id, retrievals, stores, and compaction events. Use it when answers look “stale” or
-context balloons across turns.
-
-### Approval center
-
-Paused or decided approval gates: policy, approver, decision, latency. Pair with
-[Human-in-the-loop](/docs/human-in-the-loop).
-
-### Metrics
-
-Tokens, estimated cost, provider latency, tool latency, handoff and approval counts — updated
-as the stream progresses, not only at the end.
-
-### Trace viewer
-
-Raw events, derived spans, and JSON export. Use this when building exporters, writing tests
-around execution shape, or attaching a reproducible artifact to an issue.
-
-> **TODO:** Add screenshot — trace viewer events tab.
-
-## Replaying traces
-
-During SDK development, Studio can replay recorded traces as if the engine were emitting them
-live. That keeps the UI honest: panels must work against a stream, not against a finished
-blob loaded once.
-
-Typical demo traces:
+Studio ships with demo runs that exercise tools, handoffs, approvals, and memory so the panels
+are populated before you wire your own exporter.
 
 | Trace              | What it exercises                        |
 | ------------------ | ---------------------------------------- |
@@ -169,28 +79,12 @@ Typical demo traces:
 | `research`         | Memory retrieve/compact + handoff        |
 | `multi-agent`      | Ops → research → security                |
 
-Replay from the terminal (`shiro replay traces/refund`) or the sidebar list. Later, pointing
-Studio at a live `TraceManager` export should reuse the same panel contracts.
-
-See [Tracing](/docs/tracing) for exporters (`JsonTraceExporter`, `ConsoleTraceExporter`).
-
-## Debugging workflows
-
-| Symptom                     | Where to look first                           |
-| --------------------------- | --------------------------------------------- |
-| Slow run                    | Timeline spans; metrics provider vs tool time |
-| Wrong tool args             | Tool inspector                                |
-| Agent “forgot” prior turn   | Memory explorer + session id                  |
-| Risky tool ran unexpectedly | Approval center + tool `requiresApproval`     |
-| Confusing multi-agent path  | Execution graph + handoff events              |
-| Need a bug report artifact  | Trace viewer JSON export                      |
-
 ## Wiring your app
 
-1. Create a shared `TraceManager` (or event bus) on the [engine](/docs/engine)
+1. Create a shared `TraceManager` on the [engine](/docs/engine)
 2. Execute through `engine.execute(...)`
-3. Export JSON or stream events into Studio
-4. Open the run in Studio while iterating on tools and prompts
+3. Export JSON with `JsonTraceExporter`
+4. Import the file in Studio
 
 ```ts
 import { Engine, JsonTraceExporter, TraceManager } from "@shiro/core";
@@ -201,12 +95,23 @@ const engine = new Engine({ events: traces });
 const json = await traces.export(new JsonTraceExporter());
 ```
 
+## Debugging workflows
+
+| Symptom                     | Where to look first                           |
+| --------------------------- | --------------------------------------------- |
+| Slow run                    | Timeline spans; metrics provider vs tool time |
+| Wrong tool args             | Tool inspector                                |
+| Agent “forgot” prior turn   | Memory explorer + session id                  |
+| Risky tool ran unexpectedly | Approval center + tool `requiresApproval`     |
+| Confusing multi-agent path  | Execution graph + handoff events              |
+| Need a bug report artifact  | Trace viewer / JSON export                    |
+
 ## Common mistakes
 
 - Expecting Studio to see tools you called outside the runner
 - Debugging only from application logs after adopting traces
 - Treating Studio as the place to _define_ agents (define them in code; inspect them here)
-- Waiting until production incidents to open a timeline
+- Forgetting to install `@shiro/studio` when using `shiro dev` outside the monorepo
 
 ## Related
 

@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import boxen from "boxen";
 import chalk from "chalk";
 import { Command } from "commander";
 import ora from "ora";
 import prompts from "prompts";
 
-const VERSION = "0.0.0";
+const VERSION = "0.1.0";
+const GITHUB_REPO = "ArchishaSahai/shiro";
+const REQUIRE = createRequire(import.meta.url);
+
 const PROVIDERS: readonly ProviderSummary[] = [
   {
     configKeys: ["OPENAI_API_KEY"],
@@ -19,26 +23,13 @@ const PROVIDERS: readonly ProviderSummary[] = [
     displayName: "OpenAI",
     packageName: "@shiro/openai",
     providerId: "openai",
-  },
-  {
-    configKeys: ["ANTHROPIC_API_KEY"],
-    dependency: "@shiro/anthropic",
-    displayName: "Anthropic",
-    packageName: "@shiro/anthropic",
-    providerId: "anthropic",
-  },
-  {
-    configKeys: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-    dependency: "@shiro/gemini",
-    displayName: "Gemini",
-    packageName: "@shiro/gemini",
-    providerId: "gemini",
+    packageDir: "packages/openai",
   },
 ];
 
 type PackageManager = "pnpm" | "npm" | "yarn";
 type Language = "typescript" | "javascript";
-type ProviderId = "openai" | "anthropic" | "gemini";
+type ProviderId = "openai";
 type CheckStatus = "ok" | "warning" | "error";
 
 interface InitAnswers {
@@ -54,6 +45,7 @@ interface ProviderSummary {
   readonly displayName: string;
   readonly packageName: string;
   readonly providerId: ProviderId;
+  readonly packageDir: string;
 }
 
 interface PackageJson {
@@ -90,7 +82,7 @@ const program = new Command();
 
 program
   .name("shiro")
-  .description("Developer tooling for Shiro agent projects.")
+  .description("Developer tooling for Shiro agent projects. Package: @shiro/cli")
   .version(VERSION, "-v, --version", "Display the Shiro CLI version.");
 
 program
@@ -98,7 +90,7 @@ program
   .argument("[name]", "Project directory")
   .description("Scaffold a new Shiro agent project.")
   .option("--package-manager <manager>", "Package manager: pnpm, npm, or yarn", parsePackageManager)
-  .option("--provider <provider>", "Provider: openai, anthropic, or gemini", parseProvider)
+  .option("--provider <provider>", "Provider: openai", parseProvider)
   .option("--model <model>", "Model name")
   .option("--language <language>", "Language: typescript or javascript", parseLanguage)
   .option("--no-install", "Skip dependency installation")
@@ -155,7 +147,7 @@ if (isCliEntrypoint()) {
 }
 
 async function initCommand(name: string | undefined, options: InitCommandOptions): Promise<void> {
-  const answers = options.yes ? defaultsForInit(options) : await promptForInit(name, options);
+  const answers = options.yes === true ? defaultsForInit(options) : await promptForInit(options);
   const targetName = name ?? "my-agent";
   const targetDir = resolve(process.cwd(), targetName);
 
@@ -164,7 +156,9 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
   }
 
   const spinner = ora(`Creating ${targetName}`).start();
-  await writeProject(targetDir, targetName, answers);
+  ensureLocalPackagesBuilt();
+  const installSpecs = await resolveInstallSpecs(targetDir);
+  await writeProject(targetDir, targetName, answers, installSpecs);
   spinner.succeed(`Created ${targetName}`);
 
   if (options.install === false) {
@@ -180,6 +174,9 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
     } else {
       install.warn("Project created, but dependency installation did not complete");
       printMuted(`Run ${installCommandFor(answers.packageManager)} inside ${targetName}.`);
+      printMuted(
+        "If packages are not on npm yet, init from this monorepo so file: deps resolve, or publish @shiro/* first."
+      );
     }
   }
 
@@ -189,7 +186,9 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
         chalk.bold("Shiro project ready"),
         "",
         `${chalk.dim("Next:")} cd ${targetName}`,
-        `${chalk.dim("Then:")} ${answers.packageManager === "npm" ? "npm run dev" : `${answers.packageManager} dev`}`,
+        `${chalk.dim("Env:")} cp .env.example .env`,
+        `${chalk.dim("Run:")} ${answers.packageManager === "npm" ? "npm run dev" : `${answers.packageManager} dev`}`,
+        `${chalk.dim("Studio:")} pnpm exec shiro dev`,
       ].join("\n"),
       { borderColor: "white", padding: 1 }
     )
@@ -205,12 +204,35 @@ async function devCommand(port: number | undefined): Promise<void> {
   }
 
   const configuredPort = port ?? (await readConfig()).studio?.port ?? 3001;
+  const studioRoot = resolveStudioRoot();
+
+  if (studioRoot === null) {
+    throwUserError(
+      [
+        "Could not find @shiro/studio.",
+        "Install it in this project:",
+        "  pnpm add -D @shiro/studio",
+        "Or reinstall the CLI (it depends on Studio):",
+        "  pnpm add -D @shiro/cli",
+      ].join("\n")
+    );
+  }
+
   console.log(chalk.bold(`Launching Shiro Studio on http://localhost:${String(configuredPort)}`));
-  const child = spawn("pnpm", ["--filter", "@shiro/studio", "dev", "-p", String(configuredPort)], {
-    cwd: findWorkspaceRoot(),
-    shell: process.platform === "win32",
-    stdio: "inherit",
-  });
+  console.log(chalk.dim(`Studio root: ${studioRoot}`));
+
+  const child = spawn(
+    process.execPath,
+    [join(studioRoot, "bin", "shiro-studio.mjs"), "dev", "-p", String(configuredPort)],
+    {
+      cwd: studioRoot,
+      env: {
+        ...process.env,
+        PORT: String(configuredPort),
+      },
+      stdio: "inherit",
+    }
+  );
 
   child.on("exit", (code) => {
     process.exit(code ?? 0);
@@ -227,12 +249,13 @@ async function infoCommand(): Promise<void> {
   const pluginNames = listInstalledPlugins(packageJson);
 
   console.log(chalk.bold("Shiro Info"));
-  printKeyValue("CLI", VERSION);
+  printKeyValue("CLI", `${VERSION} (@shiro/cli)`);
   printKeyValue("Project", packageJson?.name ?? "unknown");
   printKeyValue("Version", packageJson?.version ?? "unknown");
   printKeyValue("Provider", config.provider ?? "not configured");
   printKeyValue("Model", config.model ?? "not configured");
   printKeyValue("Plugins", pluginNames.length > 0 ? pluginNames.join(", ") : "none detected");
+  printKeyValue("Studio", resolveStudioRoot() ?? "not found");
 }
 
 async function providersCommand(): Promise<void> {
@@ -263,10 +286,7 @@ async function pluginsCommand(): Promise<void> {
   }
 }
 
-async function promptForInit(
-  name: string | undefined,
-  options: InitCommandOptions
-): Promise<InitAnswers> {
+async function promptForInit(options: InitCommandOptions): Promise<InitAnswers> {
   const response = await prompts(
     [
       {
@@ -278,24 +298,20 @@ async function promptForInit(
         initial: 0,
         message: "Package manager",
         name: "packageManager",
-        type: "select",
+        type: options.packageManager === undefined ? "select" : null,
       },
       {
-        choices: [
-          { title: "OpenAI", value: "openai" },
-          { title: "Anthropic", value: "anthropic" },
-          { title: "Gemini", value: "gemini" },
-        ],
+        choices: [{ title: "OpenAI", value: "openai" }],
         initial: 0,
         message: "Provider",
         name: "provider",
-        type: "select",
+        type: options.provider === undefined ? "select" : null,
       },
       {
         initial: "gpt-5",
         message: "Model",
         name: "model",
-        type: "text",
+        type: options.model === undefined ? "text" : null,
       },
       {
         choices: [
@@ -305,34 +321,26 @@ async function promptForInit(
         initial: 0,
         message: "Language",
         name: "language",
-        type: "select",
+        type: options.language === undefined ? "select" : null,
       },
     ],
     {
       onCancel: () => {
-        throwUserError("Initialization cancelled.");
+        throwUserError("Init cancelled.");
       },
     }
   );
 
-  const packageManager =
-    options.packageManager ?? parseChoice(response.packageManager, ["pnpm", "npm", "yarn"], "pnpm");
-  const provider =
-    options.provider ?? parseChoice(response.provider, ["openai", "anthropic", "gemini"], "openai");
-  const language =
-    options.language ?? parseChoice(response.language, ["typescript", "javascript"], "typescript");
-
-  if (name === undefined) {
-    printMuted("No project name supplied, using my-agent.");
-  }
-
   return {
-    language,
-    model:
-      options.model ??
-      (typeof response.model === "string" && response.model.length > 0 ? response.model : "gpt-5"),
-    packageManager,
-    provider,
+    language: (options.language ??
+      (typeof response.language === "string" ? response.language : "typescript")) as Language,
+    model: options.model ?? (typeof response.model === "string" ? response.model : "gpt-5"),
+    packageManager: (options.packageManager ??
+      (typeof response.packageManager === "string"
+        ? response.packageManager
+        : "pnpm")) as PackageManager,
+    provider: (options.provider ??
+      (typeof response.provider === "string" ? response.provider : "openai")) as ProviderId,
   };
 }
 
@@ -348,15 +356,21 @@ function defaultsForInit(options: InitCommandOptions): InitAnswers {
 async function writeProject(
   targetDir: string,
   targetName: string,
-  answers: InitAnswers
+  answers: InitAnswers,
+  installSpecs: InstallSpecs
 ): Promise<void> {
   const sourceExtension = answers.language === "typescript" ? "ts" : "js";
   await mkdir(join(targetDir, "src"), { recursive: true });
-  await writeFile(join(targetDir, ".env.example"), envTemplate(answers.provider), "utf8");
+  await writeFile(join(targetDir, ".env.example"), envTemplate(), "utf8");
+  await writeFile(
+    join(targetDir, ".gitignore"),
+    ["node_modules", ".env", ".shiro-packages", ""].join("\n"),
+    "utf8"
+  );
   await writeFile(join(targetDir, "README.md"), readmeTemplate(targetName, answers), "utf8");
   await writeFile(
     join(targetDir, "package.json"),
-    packageJsonTemplate(targetName, answers),
+    packageJsonTemplate(targetName, answers, installSpecs),
     "utf8"
   );
   await writeFile(join(targetDir, "shiro.config.ts"), configTemplate(answers), "utf8");
@@ -375,9 +389,11 @@ function runInstall(
   packageManager: PackageManager,
   cwd: string
 ): { readonly status: number | null } {
-  const command = packageManager;
-  const args = packageManager === "npm" ? ["install"] : ["install"];
-  return spawnSync(command, args, { cwd, shell: process.platform === "win32", stdio: "ignore" });
+  return spawnSync(packageManager, ["install"], {
+    cwd,
+    shell: process.platform === "win32",
+    stdio: "ignore",
+  });
 }
 
 async function collectDiagnostics(): Promise<readonly Diagnostic[]> {
@@ -408,6 +424,20 @@ async function collectDiagnostics(): Promise<readonly Diagnostic[]> {
           }
     );
   }
+
+  const studioRoot = resolveStudioRoot();
+  diagnostics.push(
+    studioRoot === null
+      ? {
+          message: "@shiro/studio not found",
+          status: "warning",
+          suggestion: "Install with: pnpm add -D @shiro/studio  (or pnpm add -D @shiro/cli)",
+        }
+      : {
+          message: `@shiro/studio found at ${studioRoot}`,
+          status: "ok",
+        }
+  );
 
   return diagnostics;
 }
@@ -502,7 +532,14 @@ function listInstalledPlugins(packageJson: PackageJson | null): readonly string[
     ...Object.keys(packageJson?.dependencies ?? {}),
     ...Object.keys(packageJson?.devDependencies ?? {}),
   ];
-  return dependencyNames.filter((name) => name.startsWith("@shiro/") && name !== "@shiro/core");
+  return dependencyNames.filter(
+    (name) =>
+      name.startsWith("@shiro/") &&
+      name !== "@shiro/core" &&
+      name !== "@shiro/cli" &&
+      name !== "@shiro/studio" &&
+      name !== "@shiro/shared"
+  );
 }
 
 function printDiagnostics(diagnostics: readonly Diagnostic[]): void {
@@ -516,10 +553,10 @@ function printDiagnostics(diagnostics: readonly Diagnostic[]): void {
 }
 
 function printProvider(provider: ProviderSummary, installed: boolean, configured: boolean): void {
-  const status = installed && configured ? "ok" : installed ? "warning" : "warning";
+  const status = installed && configured ? "ok" : "warning";
   console.log(
     `${statusIcon(status)} ${chalk.bold(provider.displayName)} ${chalk.dim(provider.packageName)} ` +
-      `${installed ? chalk.green("installed") : chalk.yellow("available")} ` +
+      `${installed ? chalk.green("installed") : chalk.yellow("missing")} ` +
       (configured ? chalk.green("configured") : chalk.dim("not configured"))
   );
 }
@@ -563,7 +600,7 @@ function parsePackageManager(value: string): PackageManager {
 }
 
 function parseProvider(value: string): ProviderId {
-  return parseChoice(value, ["openai", "anthropic", "gemini"], "openai");
+  return parseChoice(value, ["openai"], "openai");
 }
 
 function parseLanguage(value: string): Language {
@@ -588,16 +625,90 @@ function readNumberProperty(source: string, key: string): number | undefined {
   return match?.[1] === undefined ? undefined : Number.parseInt(match[1], 10);
 }
 
-function findWorkspaceRoot(): string {
-  let current = process.cwd();
-  while (!existsSync(join(current, "pnpm-workspace.yaml"))) {
-    const parent = resolve(current, "..");
-    if (parent === current) {
-      return process.cwd();
+/** Returns monorepo root when present (from cwd or this CLI install), otherwise null. */
+function findWorkspaceRootOptional(): string | null {
+  const starts = [process.cwd(), dirname(fileURLToPath(import.meta.url))];
+
+  for (const start of starts) {
+    let current = start;
+    for (;;) {
+      if (existsSync(join(current, "pnpm-workspace.yaml"))) {
+        return current;
+      }
+      const parent = resolve(current, "..");
+      if (parent === current) {
+        break;
+      }
+      current = parent;
     }
-    current = parent;
   }
-  return current;
+
+  return null;
+}
+
+/** Build local packages when scaffolding with file: deps so exports resolve. */
+function ensureLocalPackagesBuilt(): void {
+  const workspaceRoot = findWorkspaceRootOptional();
+  if (workspaceRoot === null) {
+    return;
+  }
+
+  const packages = ["packages/core", "packages/openai", "packages/cli"] as const;
+  for (const packageDir of packages) {
+    const distEntry = join(workspaceRoot, packageDir, "dist", "index.js");
+    if (existsSync(distEntry)) {
+      continue;
+    }
+    const result = spawnSync("pnpm", ["--filter", packageFilter(packageDir), "build"], {
+      cwd: workspaceRoot,
+      shell: process.platform === "win32",
+      stdio: "ignore",
+    });
+    if (result.status !== 0) {
+      printMuted(`Warning: could not build ${packageDir}. Run pnpm build in the monorepo.`);
+    }
+  }
+}
+
+function packageFilter(packageDir: string): string {
+  if (packageDir.endsWith("core")) return "@shiro/core";
+  if (packageDir.endsWith("openai")) return "@shiro/openai";
+  if (packageDir.endsWith("cli")) return "@shiro/cli";
+  return packageDir;
+}
+
+/**
+ * Resolve @shiro/studio for consumer projects and monorepo development.
+ * Order: project node_modules → CLI node_modules → monorepo apps/studio.
+ */
+function resolveStudioRoot(): string | null {
+  const candidates: string[] = [];
+
+  const fromCwd = resolve(process.cwd(), "node_modules", "@shiro", "studio");
+  candidates.push(fromCwd);
+
+  try {
+    const resolved = REQUIRE.resolve("@shiro/studio/package.json");
+    candidates.push(dirname(resolved));
+  } catch {
+    // not linked to this CLI install
+  }
+
+  const workspaceRoot = findWorkspaceRootOptional();
+  if (workspaceRoot !== null) {
+    candidates.push(join(workspaceRoot, "apps", "studio"));
+  }
+
+  for (const candidate of candidates) {
+    if (
+      existsSync(join(candidate, "package.json")) &&
+      existsSync(join(candidate, "bin", "shiro-studio.mjs"))
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 function isCliEntrypoint(): boolean {
@@ -609,40 +720,143 @@ function installCommandFor(packageManager: PackageManager): string {
   return packageManager === "npm" ? "npm install" : `${packageManager} install`;
 }
 
-function providerPackage(provider: ProviderId): string {
-  return provider === "openai" ? "@shiro/openai" : `@shiro/${provider}`;
+interface InstallSpecs {
+  readonly cli: string;
+  readonly core: string;
+  readonly openai: string;
+  readonly studio: string;
 }
 
-function envTemplate(provider: ProviderId): string {
-  const key =
-    provider === "openai"
-      ? "OPENAI_API_KEY"
-      : provider === "anthropic"
-        ? "ANTHROPIC_API_KEY"
-        : "GEMINI_API_KEY";
-  return `${key}=\n`;
+/**
+ * Prefer vendored local monorepo packages so `pnpm install` works before npm publish.
+ * Copies built package contents and rewrites @shiro/* deps to sibling file: folders.
+ */
+async function resolveInstallSpecs(targetDir: string): Promise<InstallSpecs> {
+  const workspaceRoot = findWorkspaceRootOptional();
+  if (workspaceRoot === null) {
+    return {
+      cli: `^${VERSION}`,
+      core: `^${VERSION}`,
+      openai: `^${VERSION}`,
+      studio: `^${VERSION}`,
+    };
+  }
+
+  const vendorDir = join(targetDir, ".shiro-packages");
+  await mkdir(vendorDir, { recursive: true });
+
+  vendorPackage(workspaceRoot, "packages/core", vendorDir, "shiro-core", []);
+  vendorPackage(workspaceRoot, "packages/openai", vendorDir, "shiro-openai", [
+    { name: "@shiro/core", folder: "shiro-core" },
+  ]);
+  vendorPackage(workspaceRoot, "packages/cli", vendorDir, "shiro-cli", []);
+  vendorPackage(workspaceRoot, "apps/studio", vendorDir, "shiro-studio", []);
+
+  return {
+    core: "file:.shiro-packages/shiro-core",
+    openai: "file:.shiro-packages/shiro-openai",
+    cli: "file:.shiro-packages/shiro-cli",
+    studio: "file:.shiro-packages/shiro-studio",
+  };
 }
 
-function packageJsonTemplate(name: string, answers: InitAnswers): string {
+function vendorPackage(
+  workspaceRoot: string,
+  packageDir: string,
+  vendorDir: string,
+  folderName: string,
+  localDeps: readonly { readonly name: string; readonly folder: string }[]
+): void {
+  const source = join(workspaceRoot, packageDir);
+  const destination = join(vendorDir, folderName);
+  mkdirSync(destination, { recursive: true });
+
+  const packageJsonPath = join(source, "package.json");
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+    dependencies?: Record<string, string>;
+    files?: string[];
+  };
+
+  const entries = packageJson.files ?? ["dist"];
+  for (const entry of entries) {
+    const from = join(source, entry);
+    const to = join(destination, entry);
+    if (!existsSync(from)) {
+      continue;
+    }
+    cpSync(from, to, { recursive: true });
+  }
+
+  for (const fileName of ["package.json", "README.md", "LICENSE"]) {
+    const from = join(source, fileName);
+    if (existsSync(from)) {
+      cpSync(from, join(destination, fileName));
+    }
+  }
+
+  // Studio also needs config files for Next.js.
+  if (folderName === "shiro-studio") {
+    for (const fileName of ["next.config.mjs", "postcss.config.mjs", "tsconfig.json"]) {
+      const from = join(source, fileName);
+      if (existsSync(from)) {
+        cpSync(from, join(destination, fileName));
+      }
+    }
+  }
+
+  const vendoredPackageJsonPath = join(destination, "package.json");
+  const vendored = JSON.parse(readFileSync(vendoredPackageJsonPath, "utf8")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+
+  if (vendored.dependencies !== undefined) {
+    for (const dep of localDeps) {
+      if (vendored.dependencies[dep.name] !== undefined) {
+        vendored.dependencies[dep.name] = `file:../${dep.folder}`;
+      }
+    }
+  }
+
+  // Drop workspace-only build tooling from consumer installs.
+  delete vendored.devDependencies;
+  writeFileSync(vendoredPackageJsonPath, `${JSON.stringify(vendored, null, 2)}\n`, "utf8");
+}
+
+function envTemplate(): string {
+  return "OPENAI_API_KEY=\n";
+}
+
+function packageJsonTemplate(
+  name: string,
+  answers: InitAnswers,
+  installSpecs: InstallSpecs
+): string {
   const scripts =
     answers.language === "typescript"
       ? {
           build: "tsc --noEmit",
           dev: "tsx src/agent.ts",
+          studio: "shiro dev",
         }
       : {
           dev: "node src/agent.js",
+          studio: "shiro dev",
         };
 
   return `${JSON.stringify(
     {
       dependencies: {
-        "@shiro/core": "latest",
-        [providerPackage(answers.provider)]: "latest",
+        "@shiro/core": installSpecs.core,
+        "@shiro/openai": installSpecs.openai,
         dotenv: "^17.2.1",
+        zod: "^4.0.0",
       },
-      devDependencies:
-        answers.language === "typescript" ? { tsx: "^4.20.6", typescript: "^5.9.2" } : undefined,
+      devDependencies: {
+        "@shiro/cli": installSpecs.cli,
+        "@shiro/studio": installSpecs.studio,
+        ...(answers.language === "typescript" ? { tsx: "^4.20.6", typescript: "^5.9.2" } : {}),
+      },
       name,
       private: true,
       scripts,
@@ -684,30 +898,23 @@ function configTemplate(answers: InitAnswers): string {
 }
 
 function agentTemplate(answers: InitAnswers): string {
-  const providerImport =
-    answers.provider === "openai" ? 'import { OpenAIPlugin } from "@shiro/openai";\n' : "";
-  const plugin =
-    answers.provider === "openai"
-      ? `engine.use(
+  return `import "dotenv/config";
+import { Agent, Engine } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
+
+const engine = new Engine();
+
+engine.use(
   new OpenAIPlugin({
     apiKey: process.env.OPENAI_API_KEY ?? "",
     model: "${answers.model}",
   })
 );
-`
-      : `// Install @shiro/${answers.provider} when the provider package is available.
-`;
 
-  return `import "dotenv/config";
-import { Agent, Engine } from "@shiro/core";
-${providerImport}
-const engine = new Engine();
-
-${plugin}
 const agent = new Agent({
   name: "Assistant",
   instructions: "You are a helpful AI assistant.",
-  provider: "${answers.provider}",
+  provider: "openai",
 });
 
 const result = await engine.execute(agent, "Hello!");
@@ -717,15 +924,31 @@ console.log(result.output);
 }
 
 function readmeTemplate(name: string, answers: InitAnswers): string {
+  const run = answers.packageManager === "npm" ? "npm run" : answers.packageManager;
   return `# ${name}
 
 A Shiro agent project using ${answers.provider} and ${answers.model}.
 
-## Development
+## Setup
 
 \`\`\`bash
 cp .env.example .env
-${answers.packageManager === "npm" ? "npm run dev" : `${answers.packageManager} dev`}
+# set OPENAI_API_KEY
+${answers.packageManager === "npm" ? "npm install" : `${answers.packageManager} install`}
 \`\`\`
+
+## Run the agent
+
+\`\`\`bash
+${run} dev
+\`\`\`
+
+## Open Studio
+
+\`\`\`bash
+${run} studio
+\`\`\`
+
+Studio inspects sample traces and imported JSON exports. See https://github.com/${GITHUB_REPO}.
 `;
 }

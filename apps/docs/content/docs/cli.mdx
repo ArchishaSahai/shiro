@@ -5,63 +5,63 @@ description: Scaffold projects, diagnose setup, and launch Studio from the termi
 
 # CLI
 
-The Shiro CLI helps you start a project and get into [Studio](/docs/studio) quickly. It is
-developer tooling around the SDK — not a second runtime.
+The Shiro CLI helps you start a project and open [Studio](/docs/studio). It is developer tooling
+around the SDK — not a second runtime.
 
-Install / run via your package manager, for example:
+The published package name is **`@shiro/cli`**. The binary is still `shiro`. Do not install the
+unrelated npm package named `shiro`.
 
 ```bash
-npx @shiro/cli --help
+pnpm dlx @shiro/cli --help
+# or
+pnpm add -D @shiro/cli @shiro/studio
 ```
 
 ## Workflows
 
 ### Start a new agent project
 
-**Goal:** Scaffold an app with provider choice and scripts instead of copying boilerplate.
+**Goal:** Scaffold an app with OpenAI wiring and scripts instead of copying boilerplate.
 
 ```bash
-shiro init my-agent
+pnpm dlx @shiro/cli init my-agent
 cd my-agent
 ```
 
 Useful flags:
 
-| Flag                                   | Purpose                        |
-| -------------------------------------- | ------------------------------ |
-| `--provider openai\|anthropic\|gemini` | Preselect provider integration |
-| `--model <name>`                       | Default model string           |
-| `--language typescript\|javascript`    | Project language               |
-| `--package-manager pnpm\|npm\|yarn`    | Installer                      |
-| `-y, --yes`                            | Defaults, no prompts           |
-| `--no-install`                         | Skip dependency install        |
+| Flag                                | Purpose                     |
+| ----------------------------------- | --------------------------- |
+| `--provider openai`                 | Preselect provider (OpenAI) |
+| `--model <name>`                    | Default model string        |
+| `--language typescript\|javascript` | Project language            |
+| `--package-manager pnpm\|npm\|yarn` | Installer                   |
+| `-y, --yes`                         | Defaults, no prompts        |
+| `--no-install`                      | Skip dependency install     |
 
-After init, configure `OPENAI_API_KEY` (or the provider you chose), then run the project’s
-`dev` script.
+After init, set `OPENAI_API_KEY`, then run the project’s `dev` script. Open Studio with
+`pnpm studio` (runs `shiro dev`).
+
+When you run init from this monorepo, generated dependencies use local `file:` paths so
+`pnpm install` works before packages are published to npm.
 
 ### Develop with Studio
 
-**Goal:** Validate the project, then open Studio to inspect runs.
+**Goal:** Validate the project, then open Studio to inspect sample runs and imported traces.
 
 ```bash
 shiro dev
 shiro dev --port 3001
 ```
 
-`dev` runs the same checks as `doctor`. If something is broken (missing dependency, missing
-key), it stops before launching Studio. On success it starts the Studio app (in the monorepo
-this filters `@shiro/studio`).
+`dev` runs the same checks as `doctor`, then starts `@shiro/studio` from the project’s
+`node_modules` (or the monorepo Studio app). It does **not** require a pnpm workspace filter.
 
 ### Diagnose a broken setup
-
-**Goal:** See what is wrong before you debug agent logic.
 
 ```bash
 shiro doctor
 ```
-
-Use this when `execute` fails for environmental reasons — missing packages, unset API keys,
-misconfigured project metadata.
 
 ### Inspect project metadata
 
@@ -69,17 +69,13 @@ misconfigured project metadata.
 shiro info
 ```
 
-Prints CLI version, project name, configured provider/model, and detected plugins. Useful in
-bug reports.
-
 ### List provider integration status
 
 ```bash
 shiro providers
 ```
 
-Shows which provider packages are installed and whether related env keys are present. Pair with
-[Providers](/docs/providers) and [Installation](/docs/installation).
+Currently documents the OpenAI provider package (`@shiro/openai`).
 
 ### List detected plugins
 
@@ -87,49 +83,16 @@ Shows which provider packages are installed and whether related env keys are pre
 shiro plugins
 ```
 
-Confirms what the CLI can see from `package.json` — not a substitute for checking
-`engine.use(...)` in code.
-
-### Version
-
-```bash
-shiro version
-# or: shiro --version
-```
-
-## How this fits day-to-day
-
-```txt
-shiro init     →  create project
-     ↓
-configure env  →  OPENAI_API_KEY=...
-     ↓
-write agents   →  @shiro/core APIs
-     ↓
-shiro doctor   →  fix setup issues
-     ↓
-shiro dev      →  Studio for timelines / tools / approvals
-```
-
-Running agents in production still goes through your app calling `engine.execute`. The CLI does
-not replace that path.
-
-## Best practices
-
-- Run `doctor` before filing “Studio is empty” issues
-- Keep provider env vars out of git
-- Use Studio (`dev`) while adding tools and approvals
-- Attach `info` + trace JSON to bug reports
-
 ## Common mistakes
 
-- Expecting `shiro run` as a production orchestrator — define agents in code; use Studio to
-  inspect
-- Launching Studio without a registered provider plugin in the app under test
-- Ignoring `doctor` errors and debugging prompts instead
+- Installing the bare npm package `shiro` (unrelated quiz engine) instead of `@shiro/cli`
+- Expecting `shiro run` to orchestrate production agents — define agents in code; use Studio to
+  inspect traces
+- Forgetting `@shiro/studio` when using `shiro dev` outside the monorepo
+- Skipping `OPENAI_API_KEY` before `pnpm dev`
 
 ## Related
 
-- [Studio](/docs/studio)
 - [Installation](/docs/installation)
+- [Studio](/docs/studio)
 - [Quick Start](/docs/quick-start)

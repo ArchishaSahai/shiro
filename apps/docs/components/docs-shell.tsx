@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DocsSearch } from "@/components/docs-search";
+import { GitHubIcon } from "@/components/github-icon";
+import { GITHUB_REPO_URL } from "@/lib/site";
 
 interface TocItem {
   readonly depth?: number;
@@ -148,7 +150,10 @@ export function DocsShell({
           <Link href="/docs">Docs</Link>
           <Link href="/docs/api-reference">API</Link>
           <Link href="/docs/examples">Examples</Link>
-          <Link href="https://github.com/shiro-ai/shiro">GitHub</Link>
+          <a href={GITHUB_REPO_URL} rel="noopener noreferrer" target="_blank">
+            <GitHubIcon className="h-3.5 w-3.5 opacity-70" />
+            GitHub
+          </a>
         </nav>
         <DocsSearch enableShortcut />
         <button
@@ -222,15 +227,26 @@ export function DocsShell({
             >
               <div className="docs-drawer-header">
                 <span>Shiro</span>
-                <button
-                  aria-label="Close navigation"
-                  onClick={() => {
-                    setDrawerOpen(false);
-                  }}
-                  type="button"
-                >
-                  <X aria-hidden="true" className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    aria-label="Shiro on GitHub"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-white/55 transition hover:bg-white/[.06] hover:text-white"
+                    href={GITHUB_REPO_URL}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    <GitHubIcon className="h-4 w-4" />
+                  </a>
+                  <button
+                    aria-label="Close navigation"
+                    onClick={() => {
+                      setDrawerOpen(false);
+                    }}
+                    type="button"
+                  >
+                    <X aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
               <DocsSearch variant="sidebar" />
               <SidebarNav activeGroupLabels={activeGroupLabels} pathname={pathname} />

@@ -1,22 +1,22 @@
 {
   "name": "@shiro/shared",
-  "version": "0.0.0",
-  "description": "Shared internals for Shiro packages.",
+  "version": "0.1.0",
+  "description": "Shared utilities for Shiro.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/shiro-sdk/shiro#readme",
+  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shiro-sdk/shiro.git",
+    "url": "git+https://github.com/ArchishaSahai/shiro.git",
     "directory": "packages/shared"
   },
   "bugs": {
-    "url": "https://github.com/shiro-sdk/shiro/issues"
+    "url": "https://github.com/ArchishaSahai/shiro/issues"
   },
   "keywords": [
     "shiro",
-    "typescript",
-    "shared"
+    "shared",
+    "typescript"
   ],
   "types": "./dist/index.d.ts",
   "exports": {

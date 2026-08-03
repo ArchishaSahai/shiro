@@ -11,7 +11,6 @@ import {
   GitBranch,
   Layers3,
   LockKeyhole,
-  Play,
   Search,
   ShieldCheck,
   Sparkles,
@@ -20,11 +19,10 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { CopyCommand } from "@/components/copy-command";
+import { GitHubIcon } from "@/components/github-icon";
 import { InteractiveDemo } from "@/components/interactive-demo";
 import { TerminalReplay, type TerminalLine } from "@/components/terminal-replay";
-
-/** Swap this for the published YouTube demo URL when ready. */
-const DEMO_VIDEO_URL = "https://www.youtube.com/watch?v=TODO";
+import { GITHUB_REPO_URL } from "@/lib/site";
 
 const navItems = [
   { href: "/docs", label: "Docs" },
@@ -34,7 +32,7 @@ const navItems = [
 ] as const;
 
 const runLines: readonly TerminalLine[] = [
-  { kind: "command", text: "$ engine.stream({ input: 'Refund request for invoice_4192' })" },
+  { kind: "command", text: "$ await engine.execute(agent, 'Refund request for invoice_4192')" },
   { kind: "pink", text: "run.started" },
   { kind: "event", text: "provider.call agent='support' model='gpt-5'" },
   { kind: "purple", text: "handoff.started support -> billing" },
@@ -162,9 +160,26 @@ function SiteNav() {
               {item.label}
             </Link>
           ))}
+          <a
+            className="text-sm font-medium text-white/52 transition hover:text-white"
+            href={GITHUB_REPO_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            GitHub
+          </a>
         </div>
-        <div className="hidden items-center gap-3 lg:flex">
-          <div className="flex h-10 min-w-72 items-center justify-between rounded-full border border-white/[.10] bg-white/[.035] px-4 text-white/42">
+        <div className="flex items-center gap-3">
+          <a
+            aria-label="Shiro on GitHub"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/[.10] bg-white/[.035] text-white/48 transition hover:border-[#ff4fd8]/35 hover:bg-white/[.05] hover:text-white hover:shadow-[0_0_24px_rgba(255,79,216,.08)]"
+            href={GITHUB_REPO_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <GitHubIcon className="h-4 w-4" />
+          </a>
+          <div className="hidden h-10 min-w-72 items-center justify-between rounded-full border border-white/[.10] bg-white/[.035] px-4 text-white/42 lg:flex">
             <span className="flex items-center gap-2">
               <Search aria-hidden="true" className="h-4 w-4" />
               Search
@@ -198,7 +213,7 @@ function Hero() {
         </HeroItem>
         <HeroItem>
           <div className="mx-auto mt-8 max-w-md">
-            <CopyCommand command="npm install @shiro/core @shiro/openai" />
+            <CopyCommand command="pnpm add @shiro/core @shiro/openai zod" />
           </div>
         </HeroItem>
         <HeroItem>
@@ -209,18 +224,18 @@ function Hero() {
             >
               Start building
             </Link>
-            <a
-              className="shiro-button h-14 px-8 text-base"
-              href={DEMO_VIDEO_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <Play aria-hidden="true" className="h-4 w-4 fill-current" />
-              Watch demo
-            </a>
             <Link className="shiro-button h-14 px-8 text-base" href="/docs/api-reference">
               API Reference
             </Link>
+            <a
+              className="shiro-button h-14 px-8 text-base"
+              href={GITHUB_REPO_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <GitHubIcon className="h-4 w-4" />
+              GitHub
+            </a>
           </div>
         </HeroItem>
       </motion.div>
@@ -349,9 +364,9 @@ function ArchitecturePanel() {
             </div>
             <pre className="mt-6 whitespace-pre-wrap text-white/76">
               {`// ${step.title}
-const run = await engine.stream(agent, input);
-run.on("${step.code}", event => studio.record(event));
-trace.export({ include: ["provider", "tool", "approval"] });`}
+const result = await engine.execute(agent, input);
+traces.on("${step.code}", event => studio.record(event));
+await traces.export(new JsonTraceExporter());`}
             </pre>
           </div>
         </div>
@@ -510,7 +525,7 @@ function FinalCta() {
           app.
         </p>
         <div className="mx-auto mt-6 max-w-md">
-          <CopyCommand command="npm install @shiro/core @shiro/openai" />
+          <CopyCommand command="pnpm add @shiro/core @shiro/openai zod" />
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link className="shiro-button h-12 px-6" href="/docs/quick-start">
@@ -519,6 +534,15 @@ function FinalCta() {
           <Link className="shiro-button h-12 px-6" href="/docs/api-reference">
             API Reference
           </Link>
+          <a
+            className="shiro-button h-12 px-6"
+            href={GITHUB_REPO_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <GitHubIcon className="h-4 w-4" />
+            GitHub
+          </a>
         </div>
       </div>
     </RevealSection>
@@ -534,20 +558,56 @@ function SiteFooter() {
           <p className="mt-4 max-w-xs text-white/45">
             A TypeScript runtime for inspectable agent execution.
           </p>
+          <a
+            className="mt-4 inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
+            href={GITHUB_REPO_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <GitHubIcon className="h-4 w-4" />
+            GitHub
+          </a>
         </div>
-        {[
-          ["Docs", "Introduction", "Installation", "Quickstart"],
-          ["Guides", "Agents", "Handoffs", "Tracing"],
-          ["Reference", "API Reference", "Examples", "Studio"],
-        ].map(([title, ...items]) => (
+        {(
+          [
+            [
+              "Docs",
+              [
+                { href: "/docs", label: "Introduction" },
+                { href: "/docs/installation", label: "Installation" },
+                { href: "/docs/quick-start", label: "Quick start" },
+              ],
+            ],
+            [
+              "Guides",
+              [
+                { href: "/docs/agents", label: "Agents" },
+                { href: "/docs/multi-agent", label: "Handoffs" },
+                { href: "/docs/tracing", label: "Tracing" },
+              ],
+            ],
+            [
+              "Reference",
+              [
+                { href: "/docs/api-reference", label: "API Reference" },
+                { href: "/docs/examples", label: "Examples" },
+                { href: "/docs/studio", label: "Studio" },
+              ],
+            ],
+          ] as const
+        ).map(([title, items]) => (
           <div key={title}>
             <h3 className="font-mono text-sm font-semibold uppercase tracking-[0.15em] text-white/48">
               {title}
             </h3>
             <div className="mt-5 grid gap-3">
               {items.map((item) => (
-                <Link className="text-white/45 transition hover:text-white" href="/docs" key={item}>
-                  {item}
+                <Link
+                  className="text-white/45 transition hover:text-white"
+                  href={item.href}
+                  key={item.href}
+                >
+                  {item.label}
                 </Link>
               ))}
             </div>

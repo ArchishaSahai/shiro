@@ -1,9 +1,44 @@
 {
   "name": "@shiro/studio",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Studio application for Shiro.",
+  "version": "0.1.0",
+  "description": "Studio application for inspecting Shiro runs and traces.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArchishaSahai/shiro.git",
+    "directory": "apps/studio"
+  },
+  "bugs": {
+    "url": "https://github.com/ArchishaSahai/shiro/issues"
+  },
+  "keywords": [
+    "shiro",
+    "ai",
+    "agent",
+    "studio",
+    "observability",
+    "typescript"
+  ],
+  "bin": {
+    "shiro-studio": "./bin/shiro-studio.mjs"
+  },
+  "files": [
+    "app",
+    "bin",
+    "components",
+    "hooks",
+    "lib",
+    "public",
+    "next.config.mjs",
+    "postcss.config.mjs",
+    "tsconfig.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "next build",
     "clean": "rimraf .next",
@@ -13,7 +48,6 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@shiro/core": "workspace:*",
     "@xyflow/react": "^12.0.0",
     "framer-motion": "^12.43.0",
     "highlight.js": "^11.11.1",

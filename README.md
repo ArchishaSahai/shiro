@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/shiro"><img alt="npm version" src="https://img.shields.io/npm/v/shiro?color=111111&label=npm"></a>
-  <a href="https://github.com/shiro-sdk/shiro/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/shiro-sdk/shiro/ci.yml?branch=main&label=ci"></a>
+  <a href="https://github.com/ArchishaSahai/shiro/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ArchishaSahai/shiro/ci.yml?branch=main&label=ci"></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-111111.svg"></a>
   <a href="https://www.typescriptlang.org/"><img alt="TypeScript" src="https://img.shields.io/badge/typescript-strict-3178c6.svg"></a>
   <img alt="Coverage placeholder" src="https://img.shields.io/badge/coverage-coming%20soon-lightgrey.svg">
@@ -83,10 +83,10 @@ const result = await engine.execute(agent, "Hello!");
 console.log(result.output);
 ```
 
-Or scaffold a project with the CLI:
+Or scaffold a project with the CLI (`@shiro/cli` — not the unrelated npm package named `shiro`):
 
 ```bash
-pnpm dlx shiro init my-agent
+pnpm dlx @shiro/cli init my-agent
 cd my-agent
 cp .env.example .env
 pnpm dev
@@ -95,7 +95,9 @@ pnpm dev
 Launch Studio from a Shiro project:
 
 ```bash
-shiro dev
+pnpm studio
+# or
+pnpm exec shiro dev
 ```
 
 ## Architecture
@@ -151,7 +153,7 @@ sequenceDiagram
 | ---------------------- | ------------------------------------------------------------------------------------------------- |
 | `packages/core`        | Agent, Engine, Runner, tools, memory, sessions, tracing, plugins, approvals, and public contracts |
 | `packages/openai`      | OpenAI plugin and provider integration                                                            |
-| `packages/cli`         | `shiro` command-line developer experience                                                         |
+| `packages/cli`         | `@shiro/cli` — `shiro` binary for scaffolding and Studio launch                                   |
 | `packages/shared`      | Cross-package shared utilities                                                                    |
 | `apps/docs`            | Documentation website                                                                             |
 | `apps/studio`          | Visual run and trace dashboard                                                                    |
@@ -211,7 +213,7 @@ Key docs sections:
 
 ## CLI
 
-The Shiro CLI is designed to get a developer from zero to a running agent quickly.
+Install the CLI as **`@shiro/cli`** (the unscoped npm package `shiro` is a different project).
 
 | Command             | Description                                                                      |
 | ------------------- | -------------------------------------------------------------------------------- |
@@ -223,36 +225,19 @@ The Shiro CLI is designed to get a developer from zero to a running agent quickl
 | `shiro plugins`     | Show installed Shiro plugins and versions                                        |
 | `shiro version`     | Print the CLI version                                                            |
 
-Non-interactive scaffolding:
-
 ```bash
-shiro init my-agent --yes --no-install
+pnpm dlx @shiro/cli init my-agent --yes --no-install
 ```
 
 ## Plugin Ecosystem
 
 Shiro is built around plugins. Core owns orchestration contracts; concrete integrations register themselves through stable extension points.
 
-Plugins can provide:
-
-- LLM providers
-- Tool collections
-- Memory backends
-- Session stores
-- Middleware
-- Guardrails
-- Tracers
-- Human approval providers
-- Studio extensions
-
-Example ecosystem packages:
-
 ```ts
 import { Engine } from "@shiro/core";
 import { OpenAIPlugin } from "@shiro/openai";
 
 const engine = new Engine();
-
 engine.use(
   new OpenAIPlugin({
     apiKey: process.env.OPENAI_API_KEY!,
@@ -260,7 +245,7 @@ engine.use(
 );
 ```
 
-Planned plugin families include `@shiro/anthropic`, `@shiro/gemini`, `@shiro/redis-memory`, `@shiro/postgres-sessions`, `@shiro/slack-approval`, and `@shiro/opentelemetry`.
+Planned (not published yet): `@shiro/anthropic`, `@shiro/gemini`, `@shiro/redis-memory`, `@shiro/postgres-sessions`, `@shiro/slack-approval`, and `@shiro/opentelemetry`.
 
 ## Roadmap
 

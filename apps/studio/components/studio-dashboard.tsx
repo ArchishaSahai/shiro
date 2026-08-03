@@ -108,7 +108,7 @@ export function StudioDashboard() {
               <div className="flex items-center gap-2">
                 <a
                   className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[.08] bg-white/[.045] px-3 text-sm text-white/72 transition hover:-translate-y-0.5 hover:border-white/[.12] hover:text-white"
-                  href="https://github.com/shiro-ai/shiro"
+                  href="https://github.com/ArchishaSahai/shiro"
                 >
                   <Code2 aria-hidden="true" className="h-4 w-4" />
                   GitHub
