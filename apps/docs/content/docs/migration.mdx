@@ -1,0 +1,41 @@
+---
+title: Migration
+description: Move existing agent code into Shiro without rewriting everything at once.
+---
+
+# Migration
+
+You do not need to move an entire agent system into Shiro in one step. Start by moving the
+execution loop, then bring tools, memory, approvals, and tracing under the runtime.
+
+## Step 1: wrap the provider
+
+Keep your existing model choice, but call it through a Shiro provider. This makes provider
+calls visible to the runner and trace system.
+
+## Step 2: move tools into Shiro
+
+Convert direct function calls into typed tools. This gives the runtime a place to apply
+timeouts, approval checks, trace spans, and retries.
+
+## Step 3: introduce sessions
+
+Move conversation history and durable context into sessions. Avoid storing user-specific
+state on the agent itself.
+
+## Step 4: add approvals
+
+Start with one risky tool, such as deploy, refund, delete, or send. Mark it as requiring
+approval and confirm the run pauses in Studio.
+
+## Step 5: export traces
+
+Export traces before changing behavior. A trace gives you a baseline for comparing the old
+system with the Shiro runtime.
+
+## Common mistakes
+
+- Migrating every tool at once.
+- Keeping provider calls outside the runner.
+- Treating memory as global application state.
+- Adding Studio only after something breaks.

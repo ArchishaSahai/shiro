@@ -1,31 +1,45 @@
 ---
 title: Structured Outputs
-description: Validate final model output with schemas.
+description: Validate final answers before another system consumes them.
 ---
 
 # Structured Outputs
 
-Agents can define a final output schema.
+Structured output gives a run a final contract. Instead of trusting free text, Shiro validates
+the model response against a schema before returning it to your application.
+
+## Why it matters
+
+Agents often feed other systems: tickets, workflows, databases, dashboards, or APIs. Those
+systems need predictable data.
+
+## Example
 
 ```ts
-import { z } from "zod";
-
 const agent = new Agent({
-  name: "Weather Assistant",
-  instructions: "Return weather data.",
-  provider: "openai",
+  name: "triage",
   output: z.object({
-    city: z.string(),
-    temperature: z.number(),
-    condition: z.string(),
+    priority: z.enum(["low", "medium", "high"]),
+    summary: z.string(),
+    needsHuman: z.boolean(),
   }),
 });
-
-const result = await engine.execute(agent, "Weather in Pune");
-
-result.output.city;
-result.output.temperature;
 ```
 
-Shiro parses the final response, validates it, and asks the provider to repair invalid output until
-validation succeeds or the retry policy is exhausted.
+## When to use it
+
+Use structured output when the result leaves the chat surface or drives another system.
+
+## Best practices
+
+- Keep schemas small.
+- Use enums for decisions.
+- Validate before side effects.
+- Trace validation failures.
+- Avoid deeply nested objects unless the consumer needs them.
+
+## Common mistakes
+
+- Asking the model for JSON without validating it.
+- Returning optional fields that downstream code treats as required.
+- Using structured output to hide unclear instructions.

@@ -19,10 +19,14 @@
     "structured-outputs",
     "tracing",
     "streaming",
+    "studio",
+    "reliability",
     "error-handling",
     "examples",
     "cli",
     "api-reference",
+    "migration",
+    "faq",
     "contributing",
     "roadmap"
   ]

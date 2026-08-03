@@ -1,0 +1,53 @@
+---
+title: Reliability
+description: Timeouts, retries, failure boundaries, and run behavior under partial failure.
+---
+
+# Reliability
+
+Reliability in Shiro means the runtime knows where failure can happen. Provider calls, tools,
+handoffs, approvals, memory operations, and output validation all fail differently. Treating
+them as one generic error makes runs hard to debug and unsafe to retry.
+
+## Timeouts
+
+Use timeouts at the boundary where latency matters. Provider timeouts protect the execution
+loop from a slow model response. Tool timeouts protect the run from external services that do
+not return.
+
+```ts
+const agent = new Agent({
+  name: "support",
+  modelTimeoutMs: 30_000,
+  toolTimeoutMs: 10_000,
+});
+```
+
+## Retries
+
+Retry only operations that are safe to repeat. A read-only lookup tool is usually retryable.
+A payment, deployment, or mutation should not retry without idempotency.
+
+## Failure boundaries
+
+Keep failure boundaries close to the thing that failed:
+
+- provider errors belong to provider spans
+- tool errors belong to tool spans
+- approval rejection belongs to the approval event
+- validation errors belong to output parsing
+
+## Best practices
+
+- Use idempotency keys for mutating tools.
+- Set explicit timeouts before running in production.
+- Trace failed runs, not only successful runs.
+- Treat approval rejection as a valid outcome.
+- Store enough tool result data to reproduce failures.
+
+## Common mistakes
+
+- Retrying a mutating tool without an idempotency key.
+- Catching every runtime error at the API route boundary.
+- Hiding provider errors inside tool responses.
+- Logging text instead of exporting structured traces.

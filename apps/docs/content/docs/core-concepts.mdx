@@ -1,36 +1,55 @@
 ---
 title: Core Concepts
-description: The core concepts behind Shiro.
+description: The runtime objects that make a Shiro run inspectable.
 ---
 
 # Core Concepts
 
-## Agent
-
-An `Agent` is immutable configuration: name, instructions, provider, tools, memory, handoff
-strategy, approval behavior, and optional output schema.
+Shiro has a small set of runtime concepts. Each one owns a different part of execution.
 
 ## Engine
 
-An `Engine` is the service container and public execution entrypoint.
+The engine is the long-lived runtime service. It owns providers, plugins, registries, sessions,
+approval services, event buses, and trace exporters.
+
+Use it when you need a stable entrypoint for many runs.
 
 ## Runner
 
-A `Runner` is one execution. It is internal to orchestration.
+The runner owns one run. It tracks messages, tool calls, handoffs, approvals, memory reads,
+validation attempts, and emitted events.
 
-## Provider
+Use it indirectly through `engine.execute()` or streaming APIs.
 
-A provider adapts an LLM vendor to Shiro's `Provider` interface.
+## Agent
+
+An agent is a declarative unit of behavior: name, instructions, tools, handoffs, provider
+preferences, memory policy, and output shape.
+
+Do not put per-user state on the agent.
 
 ## Tool
 
-A tool is a typed callable capability exposed to a model.
+A tool is a typed side effect. The model may request it, but Shiro executes it.
 
-## Plugin
+Use tools for operations that need code: lookups, writes, calculations, workflow calls, or
+internal service requests.
 
-A plugin registers providers, tools, middleware, guardrails, memory, approval, tracing, and
-future Studio extensions through `PluginContext`.
+## Provider
 
-## Event
+A provider adapts a model API to Shiro. Providers should not know about Studio, approvals,
+memory, or handoffs.
 
-Events are facts emitted by execution. They power tracing, diagnostics, Studio, and logs.
+## Trace
+
+A trace is a structured record of a run. It is the source of truth for debugging.
+
+## Comparison
+
+| Concept | Lifetime | Owns |
+| --- | --- | --- |
+| Engine | process | shared services |
+| Runner | one run | execution state |
+| Agent | configuration | behavior |
+| Tool | call | side effect |
+| Trace | run history | observability |

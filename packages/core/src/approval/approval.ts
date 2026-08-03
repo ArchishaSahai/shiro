@@ -334,6 +334,7 @@ async function withApprovalTimeout<TValue>(
   }
 
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let abortHandler: (() => void) | undefined;
 
   try {
     return await Promise.race([
@@ -348,23 +349,26 @@ async function withApprovalTimeout<TValue>(
           );
         }, timeoutMs);
 
-        signal?.addEventListener(
-          "abort",
-          () => {
+        if (signal !== undefined) {
+          abortHandler = () => {
             reject(
               new ApprovalError({
                 code: ShiroErrorCode.ApprovalRejected,
                 message: "Approval was cancelled.",
               })
             );
-          },
-          { once: true }
-        );
+          };
+          signal.addEventListener("abort", abortHandler, { once: true });
+        }
       }),
     ]);
   } finally {
     if (timeout !== undefined) {
       clearTimeout(timeout);
+    }
+
+    if (signal !== undefined && abortHandler !== undefined) {
+      signal.removeEventListener("abort", abortHandler);
     }
   }
 }

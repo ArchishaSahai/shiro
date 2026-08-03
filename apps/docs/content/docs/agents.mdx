@@ -1,33 +1,45 @@
 ---
 title: Agents
-description: Define immutable agent configuration.
+description: Define instructions, tools, handoffs, provider preferences, and output contracts.
 ---
 
 # Agents
 
-Agents are configuration objects. They do not execute work directly.
+An agent is a declarative description of behavior. It should say what the model is responsible
+for, which tools it can use, which agents it can hand off to, and what shape the final output
+must have.
 
 ```ts
-import { Agent } from "@shiro/core";
-
-const agent = new Agent({
-  name: "Assistant",
-  instructions: "You are concise and helpful.",
-  provider: "openai",
+const support = new Agent({
+  name: "support",
+  instructions: "Help users resolve account and billing questions.",
+  tools: [lookupInvoice, issueRefund],
+  handoffs: [billing],
 });
 ```
 
-## Builder API
+## Why agents are declarative
 
-```ts
-const agent = Agent.builder()
-  .name("Assistant")
-  .instructions("You are concise and helpful.")
-  .provider("openai")
-  .build();
-```
+The runner owns execution. Agents should not contain request-specific state or hidden control
+flow. Keeping agents declarative makes runs easier to trace, test, and hand off.
 
-## Immutability
+## When to create multiple agents
 
-Agent configuration is validated and frozen at construction. This makes agents safe to reuse across
-runs, sessions, and handoffs.
+Use multiple agents when responsibility changes, not just when prompts get long. A billing
+agent, research agent, and deployment agent may have different tools, approvals, and output
+requirements.
+
+## Best practices
+
+- Give each agent a narrow responsibility.
+- Keep tool access explicit.
+- Use handoffs for domain changes.
+- Keep user state in sessions.
+- Validate final output when another system consumes it.
+
+## Common mistakes
+
+- Using one agent for every domain.
+- Adding tools that the agent should never call.
+- Mutating agent instructions per user.
+- Hiding business rules inside a long prompt.

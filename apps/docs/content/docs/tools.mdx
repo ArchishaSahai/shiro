@@ -1,37 +1,48 @@
 ---
 title: Tools
-description: Define callable capabilities for agents.
+description: Run typed side effects inside the Shiro execution lifecycle.
 ---
 
 # Tools
 
-Tools are typed functions exposed to models.
+Tools are functions the model can request and Shiro can execute. The important distinction is
+that the model does not run tools. The runner does.
 
 ```ts
-import { tool } from "@shiro/core";
-import { z } from "zod";
-
-const weather = tool({
-  name: "weather",
-  description: "Get weather for a city.",
-  parameters: z.object({
-    city: z.string(),
-  }),
-  execute: async ({ city }) => ({
-    city,
-    temperature: 24,
-    condition: "cloudy",
-  }),
+const issueRefund = tool({
+  name: "issueRefund",
+  description: "Issue a refund for an invoice.",
+  requiresApproval: true,
+  execute: async ({ invoiceId }: { invoiceId: string }) => {
+    return refunds.issue(invoiceId);
+  },
 });
 ```
 
-Attach tools to an agent:
+## Why tools belong in the runtime
 
-```ts
-const agent = new Agent({
-  name: "Weather Assistant",
-  instructions: "Use tools when useful.",
-  provider: "openai",
-  tools: [weather],
-});
-```
+Tool calls need observability and control. They can be slow, fail, mutate data, require
+approval, or produce sensitive output. Running tools through Shiro gives every call a trace
+span and a policy boundary.
+
+## When to use a tool
+
+Use a tool when the agent needs code: database lookups, API calls, calculations, workflow
+actions, internal services, or writes to external systems.
+
+Do not use tools for prompt-only instructions.
+
+## Best practices
+
+- Give tools narrow names.
+- Validate arguments.
+- Use approvals for destructive or external actions.
+- Add timeouts around slow services.
+- Make mutating tools idempotent.
+
+## Common mistakes
+
+- Letting tool schemas drift from implementation types.
+- Returning huge payloads to the model.
+- Retrying mutations without idempotency.
+- Calling tools outside the runner and expecting traces to include them.

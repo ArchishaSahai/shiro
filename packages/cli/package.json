@@ -2,7 +2,26 @@
   "name": "shiro",
   "version": "0.0.0",
   "description": "Command-line interface for Shiro.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://github.com/shiro-sdk/shiro#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shiro-sdk/shiro.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/shiro-sdk/shiro/issues"
+  },
+  "keywords": [
+    "shiro",
+    "ai",
+    "agent",
+    "cli",
+    "typescript",
+    "scaffold"
+  ],
+  "types": "./dist/index.d.ts",
   "bin": {
     "shiro": "./dist/index.js"
   },
@@ -15,8 +34,11 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsup ./src/index.ts --format esm --dts --clean",
+    "build": "rimraf .tsbuildinfo && tsup ./src/index.ts --format esm --dts --clean",
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"

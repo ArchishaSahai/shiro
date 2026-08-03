@@ -1,18 +1,46 @@
 ---
 title: CLI
-description: Planned command-line tooling for Shiro.
+description: Run agents, inspect traces, and launch Studio from the command line.
 ---
 
 # CLI
 
-The CLI package is scaffolded for future developer workflows.
+The Shiro CLI is useful for local runs, trace inspection, and launching Studio.
 
-Planned commands:
+## Run an agent
 
 ```bash
-npx shiro init
-npx shiro dev
-npx shiro doctor
+shiro run support-agent
 ```
 
-The CLI will focus on project setup, local development, diagnostics, and Studio integration.
+Expected output:
+
+```bash
+$ shiro run support-agent
+ok engine initialized
+ok provider connected
+-> tool weather.lookup
+-> handoff support -> research
+ok completed in 1.82s
+```
+
+## Launch Studio
+
+```bash
+shiro studio
+```
+
+Use Studio when a run needs visual inspection: timeline, graph, memory, approvals, and tool
+results.
+
+## Export traces
+
+```bash
+shiro trace export --run run_01J8 --format json
+```
+
+## Best practices
+
+- Use the CLI to reproduce bugs outside the app.
+- Attach exported traces to issues.
+- Keep CLI examples small and deterministic.

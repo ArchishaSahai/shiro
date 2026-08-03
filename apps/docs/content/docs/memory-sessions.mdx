@@ -1,34 +1,49 @@
 ---
-title: Memory & Sessions
-description: Persist conversation state and retrieve relevant memory.
+title: Memory Sessions
+description: Persist conversation and retrieved context without mutating agents.
 ---
 
-# Memory & Sessions
+# Memory Sessions
 
-Sessions store conversation state. Memory stores retrievable knowledge.
+Sessions hold durable context for a user, workflow, or conversation. Memory is the runtime
+layer that retrieves and persists useful context around a run.
+
+## Why sessions exist
+
+Agents should be reusable definitions. If you put conversation state on an agent, the agent
+becomes tied to one user. Sessions keep state separate from behavior.
+
+## Example
 
 ```ts
-import {
-  Engine,
-  InMemoryMemoryProvider,
-  InMemorySessionStore,
-  MemoryManager,
-  SessionManager,
-} from "@shiro/core";
-
-const sessionManager = new SessionManager(new InMemorySessionStore());
-const memoryManager = new MemoryManager(new InMemoryMemoryProvider());
-
-const engine = new Engine({
-  memoryManager,
-  sessionManager,
-});
-
-const session = await sessionManager.createSession();
-
-await engine.execute(agent, "Remember my project codename is Sakura.", {
-  sessionId: session.sessionId,
+await engine.execute(agent, input, {
+  sessionId: "support_1842",
 });
 ```
 
-Redis, SQLite, PostgreSQL, MongoDB, and vector memory can be added later through storage adapters.
+## What belongs in a session
+
+- conversation history
+- user-specific context
+- prior tool results worth reusing
+- decisions that affect future runs
+
+## What does not belong
+
+- provider credentials
+- agent instructions
+- global application state
+- large raw documents
+
+## Best practices
+
+- Use stable session IDs.
+- Summarize long histories.
+- Store source metadata with retrieved facts.
+- Trace memory reads and writes.
+
+## Common mistakes
+
+- Treating memory as a prompt dump.
+- Persisting every token from every run.
+- Mixing sessions across users.

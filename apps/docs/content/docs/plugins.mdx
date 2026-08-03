@@ -1,26 +1,38 @@
 ---
 title: Plugins
-description: Extend Shiro without modifying core.
+description: Extend the engine lifecycle without reaching into runtime internals.
 ---
 
 # Plugins
 
-Plugins register capabilities through `PluginContext`.
+Plugins install behavior into the engine: providers, exporters, memory backends, approval
+services, or lifecycle subscribers.
+
+## Why plugins exist
+
+The engine needs extension points, but direct access to internals makes upgrades fragile.
+Plugins receive a public context and register capabilities through stable APIs.
 
 ```ts
-engine.use(new OpenAIPlugin({ apiKey: process.env.OPENAI_API_KEY! }));
+const engine = new Engine({
+  plugins: [studioPlugin(), customTraceExporter()],
+});
 ```
 
-Plugins may contribute:
+## When to write a plugin
 
-- providers
-- tools
-- middleware
-- guardrails
-- memory providers
-- event listeners
-- tracers
-- approval integrations
-- Studio extensions
+Write a plugin when behavior should be installed once and reused across many runs.
 
-Plugins do not receive direct access to `Engine` internals.
+Good plugin candidates:
+
+- trace exporters
+- provider bundles
+- memory backends
+- approval adapters
+- Studio integrations
+
+## Common mistakes
+
+- Mutating engine internals.
+- Registering request-specific state in a plugin.
+- Hiding provider calls inside plugin hooks.

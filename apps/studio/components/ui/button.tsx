@@ -8,12 +8,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({ children, className = "", variant = "secondary", ...props }: ButtonProps) {
   const styles =
     variant === "primary"
-      ? "border-black bg-black text-white hover:bg-zinc-800"
-      : "border-zinc-300 bg-white text-black hover:border-black";
+      ? "border-white/[.12] bg-white/[.10] text-white hover:border-[#ff4fd8]/35 hover:bg-white/[.13]"
+      : "border-white/[.08] bg-white/[.045] text-white/78 hover:border-white/[.14] hover:bg-white/[.07] hover:text-white";
 
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
+      className={`inline-flex h-9 items-center justify-center rounded-lg border px-3 text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
       type="button"
       {...props}
     >

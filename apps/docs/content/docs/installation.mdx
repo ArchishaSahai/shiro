@@ -1,41 +1,57 @@
 ---
 title: Installation
-description: Install Shiro packages and configure your first provider.
+description: Install the Shiro runtime and a provider adapter.
 ---
 
 # Installation
 
-Shiro is distributed as workspace-friendly TypeScript packages.
+Install the core runtime and the provider adapter you plan to use.
 
 ```bash
-pnpm add @shiro/core @shiro/openai zod dotenv
+npm install @shiro/core @shiro/openai
 ```
 
-Use Node.js 22 or newer.
+## Packages
+
+| Package | Purpose |
+| --- | --- |
+| `@shiro/core` | Engine, runner, tools, approvals, memory, tracing, and shared types. |
+| `@shiro/openai` | OpenAI provider adapter for Shiro's provider contract. |
+| `@shiro/studio` | Optional Studio UI for inspecting traces and approvals. |
+
+## Environment
+
+Configure the provider outside your agent definitions. Keep credentials in environment variables
+or your platform's secret store.
 
 ```bash
-node --version
+OPENAI_API_KEY=...
 ```
 
-Create a `.env` file for local development:
+## Verify the install
 
-```bash
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-5
-```
-
-The core package does not construct concrete providers directly. Provider packages are installed as plugins.
+Create an engine, register a provider, and execute a small agent. If this run succeeds, the SDK
+is installed and the provider can be reached.
 
 ```ts
-import { Engine } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Agent, Engine } from "@shiro/core";
+import { openai } from "@shiro/openai";
 
-const engine = new Engine();
+const engine = new Engine({
+  providers: [openai({ model: "gpt-5" })],
+});
 
-engine.use(
-  new OpenAIPlugin({
-    apiKey: process.env.OPENAI_API_KEY!,
-    model: process.env.OPENAI_MODEL ?? "gpt-5",
-  })
-);
+const agent = new Agent({
+  name: "hello",
+  instructions: "Answer in one sentence.",
+});
+
+await engine.execute(agent, "What is Shiro?");
 ```
+
+## Common mistakes
+
+- Installing a provider package without registering it with the engine.
+- Reading secrets from agent files.
+- Creating a new engine for every request.
+- Calling the provider directly after adopting Shiro.

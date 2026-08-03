@@ -1,5 +1,3 @@
-import "fumadocs-ui/css/neutral.css";
-import "fumadocs-ui/css/preset.css";
 import "./global.css";
 
 import type { Metadata } from "next";
@@ -16,8 +14,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="flex min-h-screen flex-col bg-white text-black antialiased">
+    <html className="dark" lang="en" suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col bg-[#050506] text-white antialiased">
         <RootProvider search={{ enabled: true }}>{children}</RootProvider>
       </body>
     </html>

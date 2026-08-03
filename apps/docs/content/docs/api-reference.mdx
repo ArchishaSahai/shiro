@@ -1,54 +1,71 @@
 ---
 title: API Reference
-description: Major public classes and contracts.
+description: Public runtime APIs and the responsibility of each surface.
 ---
 
 # API Reference
 
-## Agent
-
-Immutable public definition for an agent. Owns configuration only.
-
-## AgentBuilder
-
-Fluent builder that produces immutable `Agent` instances.
+This page summarizes the public surfaces you will use most often. Use the concept pages for
+design guidance and this page when you need to check the shape of an API.
 
 ## Engine
 
-Long-lived orchestration service and public execution entrypoint.
+```ts
+new Engine(options)
+engine.execute(agent, input, options)
+engine.stream(agent, input, options)
+```
+
+The engine creates runs and owns shared services.
+
+## Agent
+
+```ts
+new Agent({
+  name,
+  instructions,
+  tools,
+  handoffs,
+  output,
+})
+```
+
+Agents describe behavior. They should not hold request-specific state.
 
 ## Tool
 
-Typed executable capability callable by a model.
+```ts
+tool({
+  name,
+  description,
+  requiresApproval,
+  execute,
+})
+```
 
-## Plugin
-
-Installable extension that registers capabilities through `PluginContext`.
+Tools are typed side effects executed by the runner.
 
 ## Provider
 
-Framework-agnostic interface for model providers.
+```ts
+openai({ model: "gpt-5" })
+```
 
-## MemoryProvider
+Providers adapt vendor model APIs to Shiro.
 
-Storage abstraction for memory entries.
+## Trace
 
-## SessionStore
+```ts
+result.trace.export(options)
+```
 
-Storage abstraction for session state.
+Traces record provider calls, tools, handoffs, approvals, memory, timing, and output validation.
 
-## TraceManager
+## Options
 
-Event-driven trace builder and trace event bus.
-
-## ApprovalManager
-
-Coordinates approval policy evaluation and approval provider calls.
-
-## HandoffManager
-
-Coordinates safe agent handoff transitions.
-
-## OutputSchema
-
-Minimal schema contract for final output validation. Zod schemas satisfy it directly.
+| Option | Use |
+| --- | --- |
+| `sessionId` | Attach durable context to a run. |
+| `modelTimeoutMs` | Bound provider latency. |
+| `toolTimeoutMs` | Bound tool latency. |
+| `output` | Validate final result shape. |

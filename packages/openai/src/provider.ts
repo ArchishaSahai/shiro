@@ -8,6 +8,7 @@ import {
   type ProviderResponse,
   type Tool as ShiroTool,
   type ToolCallRequest,
+  type JsonObject,
 } from "@shiro/core";
 import OpenAI from "openai";
 import type { ClientOptions } from "openai";
@@ -221,7 +222,7 @@ type MutableToolCallRequest = {
   -readonly [Key in keyof ToolCallRequest]: ToolCallRequest[Key];
 };
 
-function parseToolArguments(value: string) {
+function parseToolArguments(value: string): JsonObject {
   try {
     const parsed: unknown = JSON.parse(value);
     return isJsonObject(parsed) ? parsed : Object.freeze({});
@@ -230,6 +231,6 @@ function parseToolArguments(value: string) {
   }
 }
 
-function isJsonObject(value: unknown): value is Record<string, never> {
+function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

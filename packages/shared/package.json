@@ -2,7 +2,23 @@
   "name": "@shiro/shared",
   "version": "0.0.0",
   "description": "Shared internals for Shiro packages.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://github.com/shiro-sdk/shiro#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shiro-sdk/shiro.git",
+    "directory": "packages/shared"
+  },
+  "bugs": {
+    "url": "https://github.com/shiro-sdk/shiro/issues"
+  },
+  "keywords": [
+    "shiro",
+    "typescript",
+    "shared"
+  ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,12 +29,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup ./src/index.ts --format esm --dts --clean",
+    "build": "rimraf .tsbuildinfo && tsup ./src/index.ts --format esm --dts --clean",
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "rimraf": "^6.0.1"
   }

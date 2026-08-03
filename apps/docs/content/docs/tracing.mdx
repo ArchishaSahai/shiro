@@ -1,32 +1,59 @@
 ---
 title: Tracing
-description: Capture execution traces for observability and Studio.
+description: Record the execution events needed to understand a Shiro run.
 ---
 
 # Tracing
 
-`TraceManager` consumes Shiro lifecycle events and builds immutable run traces.
+A Shiro trace is a structured record of one run. It includes provider calls, tool spans,
+handoffs, approvals, memory reads and writes, validation attempts, timing, usage, and final
+output.
+
+## Why traces exist
+
+Text logs can tell you that something happened. A trace tells you where it happened in the run
+and what came before it.
+
+## Example
 
 ```ts
-import { ConsoleTraceExporter, JsonTraceExporter, TraceManager } from "@shiro/core";
-
-const traces = new TraceManager();
-const engine = new Engine({ events: traces });
-
-await engine.execute(agent, "Hello");
-
-await traces.export(new ConsoleTraceExporter());
-const json = await traces.export(new JsonTraceExporter());
+const result = await engine.execute(agent, input);
+await result.trace.export({ destination: "studio" });
 ```
 
-Traces include:
+## What to inspect first
 
-- provider calls
-- tool executions
-- memory and session activity
-- handoffs
-- approvals
-- structured output validation and repair
-- timeline events and spans
+When a run fails or produces a bad answer, inspect these in order:
 
-Future OpenTelemetry, Jaeger, Langfuse, and Phoenix integrations can implement `TraceExporter`.
+1. provider input
+2. model tool request
+3. tool arguments
+4. tool result
+5. handoff decision
+6. approval state
+7. memory reads
+8. output validation
+
+## Exporters
+
+Trace exporters send run data to Studio, JSON files, logs, or external observability systems.
+
+```ts
+await trace.export({
+  destination: "json",
+  include: ["provider", "tool", "approval", "memory"],
+});
+```
+
+## Best practices
+
+- Trace failed runs and successful runs.
+- Keep trace IDs in application logs.
+- Export raw traces for bug reports.
+- Use Studio while developing new tools.
+
+## Common mistakes
+
+- Logging only final answers.
+- Dropping tool arguments from traces.
+- Treating provider latency as total run latency.

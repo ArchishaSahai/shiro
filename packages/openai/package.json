@@ -2,7 +2,27 @@
   "name": "@shiro/openai",
   "version": "0.0.0",
   "description": "OpenAI provider plugin for Shiro.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://github.com/shiro-sdk/shiro#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shiro-sdk/shiro.git",
+    "directory": "packages/openai"
+  },
+  "bugs": {
+    "url": "https://github.com/shiro-sdk/shiro/issues"
+  },
+  "keywords": [
+    "openai",
+    "shiro",
+    "ai",
+    "agent",
+    "plugin",
+    "provider",
+    "typescript"
+  ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,12 +33,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup ./src/index.ts --format esm --clean && tsc --emitDeclarationOnly",
+    "build": "rimraf .tsbuildinfo && tsup ./src/index.ts --format esm --clean && tsc --emitDeclarationOnly",
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@shiro/core": "workspace:*",
     "openai": "^7.2.0"

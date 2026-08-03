@@ -1,32 +1,40 @@
 ---
 title: Execution Pipeline
-description: The execution flow from input to final response.
+description: The ordered stages a Shiro run moves through.
 ---
 
 # Execution Pipeline
 
-```txt
-Initialize
-  -> Validate
-  -> Resolve Provider
-  -> Load Session
-  -> Retrieve Memory
-  -> Prepare Messages
-  -> Provider Loop
-  -> Tool Execution
-  -> Handoff Evaluation
-  -> Structured Output Validation
-  -> Persist Session
-  -> Persist Memory
-  -> Finalize
-```
+The pipeline is the path one run follows from input to final output. Not every run uses every
+stage, but every stage emits events when it is used.
 
-The provider loop is iterative. If the model requests tools, Shiro executes them, appends results,
-and calls the provider again until a final answer is produced or the maximum iteration count is
-reached.
+## Stages
 
-```ts
-await engine.execute(agent, "What is the weather in Pune?", {
-  maxIterations: 8,
-});
-```
+1. create runner
+2. load session context
+3. retrieve memory
+4. call provider
+5. execute requested tools
+6. process handoffs
+7. pause for approvals
+8. validate structured output
+9. persist memory
+10. export trace
+
+## Why order matters
+
+Memory must be loaded before the provider needs context. Approvals must happen before risky
+tools execute. Output validation must happen before another system consumes the result.
+
+## Best practices
+
+- Trace every stage that changes state.
+- Keep tools small so pipeline failures are easy to locate.
+- Do not skip approval for convenience in development.
+- Validate output before writing to external systems.
+
+## Common mistakes
+
+- Reading memory after the provider call.
+- Executing tools outside the runner.
+- Treating output validation as a UI concern.

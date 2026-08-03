@@ -1,0 +1,102 @@
+---
+title: Studio
+description: Inspect Shiro runs with timelines, execution graphs, approval queues, memory views, and trace details.
+---
+
+# Studio
+
+Studio is the workspace for understanding what an agent did. It reads Shiro traces and turns
+them into a timeline, execution graph, tool inspector, memory explorer, approval center, run
+explorer, metrics dashboard, and trace viewer.
+
+Studio should be used while building and while debugging. It is not a separate orchestration
+engine. It observes the same events that the runtime emits.
+
+## Installation
+
+Install Studio alongside the runtime packages used by your application.
+
+```bash
+npm install @shiro/core @shiro/openai @shiro/studio
+```
+
+## Launching Studio
+
+Run Studio from the project that emits traces.
+
+```bash
+shiro studio
+```
+
+Studio connects to the trace stream and displays new runs as they arrive.
+
+## Loading traces
+
+A run can be loaded from a live stream or an exported trace file. Live traces are best while
+developing. Exported traces are best for bug reports and reviews.
+
+```ts
+await trace.export({
+  destination: "studio",
+  include: ["provider", "tool", "handoff", "approval", "memory"],
+});
+```
+
+## Timeline
+
+The timeline shows the ordered execution events for a run. Use it to answer practical questions:
+
+- Which provider call produced the tool request?
+- Which tool took the longest?
+- Did an approval pause the run?
+- Which handoff changed the active agent?
+- Was memory read before or after the provider call?
+
+## Execution graph
+
+The graph groups the timeline into connected nodes: agent, provider, tool, approval, memory,
+and output. It is useful when a run has multiple handoffs or parallel tool calls.
+
+## Memory explorer
+
+The memory explorer shows what context was loaded and what was written back after the run.
+Use it to debug stale context, missing facts, or sessions that are growing too large.
+
+## Tool inspector
+
+The tool inspector shows arguments, timing, result payloads, and failures. It is the fastest
+way to verify that a model called the tool you expected with the arguments you expected.
+
+## Approval center
+
+The approval center lists paused runs. Reviewers can approve or reject actions without reading
+application logs.
+
+## Run explorer
+
+The run explorer is the entry point for browsing runs by status, agent, provider, duration,
+or error state.
+
+## Metrics dashboard
+
+The metrics dashboard summarizes latency, provider calls, tool counts, approval waits, token
+usage, and failure rates.
+
+## Trace viewer
+
+The trace viewer exposes the raw structured trace. Use it when building exporters, writing
+tests around execution behavior, or comparing Studio with your own observability pipeline.
+
+## Common workflows
+
+- Debug a slow tool call from the timeline.
+- Follow a handoff from the graph.
+- Review a blocked deployment from the approval center.
+- Compare memory reads across two runs.
+- Export a trace and attach it to an issue.
+
+## Troubleshooting
+
+If Studio does not show a run, confirm that the engine is emitting trace events and that the
+trace exporter includes the event types you expect. If a run appears without tool details, check
+that tool execution is happening through Shiro rather than direct application code.

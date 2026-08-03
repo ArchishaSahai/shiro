@@ -1,37 +1,37 @@
 ---
 title: Providers
-description: Add LLM vendors through provider plugins.
+description: Adapt model APIs to Shiro without coupling vendors to the runtime.
 ---
 
 # Providers
 
-Providers adapt model vendors to Shiro.
+A provider turns a Shiro model request into a vendor API call. It should be small: accept
+messages and model options, return model output and tool requests, and report usage.
+
+## Why providers are isolated
+
+Provider APIs change. Runtime behavior should not. Shiro keeps vendor-specific code behind an
+adapter so tools, memory, approvals, handoffs, and Studio do not depend on one model SDK.
+
+## Example
 
 ```ts
-export interface Provider {
-  readonly name: string;
-  generate(request: ProviderRequest, context: ProviderContext): Promise<ProviderResponse>;
-  stream?(request: ProviderRequest, context: ProviderContext): AsyncIterable<ProviderResponse>;
-}
-```
-
-## OpenAI
-
-```ts
-engine.use(
-  new OpenAIPlugin({
-    apiKey: process.env.OPENAI_API_KEY!,
-    model: "gpt-5",
-  })
-);
-```
-
-Agents reference providers by name.
-
-```ts
-const agent = new Agent({
-  name: "Assistant",
-  instructions: "You are helpful.",
-  provider: "openai",
+const engine = new Engine({
+  providers: [openai({ model: "gpt-5" })],
 });
 ```
+
+## What providers should not own
+
+- memory persistence
+- approval decisions
+- tool execution
+- Studio rendering
+- handoff policy
+
+## Best practices
+
+- Keep provider configuration close to engine setup.
+- Record token usage and latency.
+- Normalize errors at the adapter boundary.
+- Avoid leaking vendor-specific response shapes into tools.

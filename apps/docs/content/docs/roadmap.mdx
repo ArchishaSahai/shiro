@@ -1,25 +1,42 @@
 ---
 title: Roadmap
-description: Planned direction for Shiro.
+description: Planned runtime, Studio, provider, and observability work.
 ---
 
 # Roadmap
 
-## Near Term
+The roadmap is organized around runtime clarity. New features should make runs easier to
+control, inspect, and reproduce.
 
-- richer streaming API
-- provider packages
-- Studio trace viewer
-- CLI project diagnostics
-- persistent memory adapters
+## Runtime
 
-## Later
+- stronger retry policy primitives
+- first-class timeout configuration
+- richer approval adapters
+- more output repair controls
 
-- marketplace-ready plugins
+## Studio
+
+- trace comparison
+- saved run views
+- approval audit history
+- memory diffing
+- tool latency breakdowns
+
+## Providers
+
+- more provider adapters
+- provider capability metadata
+- normalized usage reporting
+
+## Observability
+
 - OpenTelemetry exporter
-- Langfuse exporter
-- browser approval provider
-- production deployment recipes
+- JSON trace snapshots
+- external trace sinks
+- run-level metrics
 
-The architecture is intentionally extension-first so these additions do not require rewriting the
-execution engine.
+## Principles
+
+Shiro should avoid features that hide execution. The runtime should expose enough structure for
+developers to understand why a run behaved the way it did.

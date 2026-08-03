@@ -1,30 +1,46 @@
 ---
 title: Runner
-description: The per-execution orchestration object.
+description: The per-run coordinator for provider calls, tools, handoffs, approvals, memory, and output.
 ---
 
 # Runner
 
-`Runner` represents exactly one execution. Developers normally do not instantiate it directly.
+A `Runner` owns one execution. Application code usually does not instantiate it directly; the
+engine creates it when you call `execute()` or start a stream.
 
-## Lifecycle
+## What it does
+
+The runner keeps the run coherent. It decides when to call the provider, execute tools, switch
+agents, pause for approval, load memory, validate output, and emit trace events.
+
+## Why it exists
+
+Agent execution is stateful. If provider calls, tool calls, and approvals are coordinated by
+separate application code paths, the run becomes difficult to replay. The runner keeps those
+transitions in one place.
+
+## Example flow
 
 ```txt
-Created
-  -> Initializing
-  -> Running
-  -> Completed | Failed | Cancelled
+run.started
+provider.call
+tool.execute
+approval.required
+approval.granted
+provider.call
+output.validated
+run.completed
 ```
 
-Runner owns per-run state:
+## Best practices
 
-- run context
-- active agent
-- message list
-- current session snapshot
-- retrieved memory
-- current provider response
-- iteration count
+- Let the engine create runners.
+- Subscribe to runner events for observability.
+- Treat a rejected approval as a normal outcome.
+- Keep tool side effects idempotent when possible.
 
-Runner delegates to providers, tool executors, approval managers, handoff managers, memory managers,
-and structured output managers.
+## Common mistakes
+
+- Reimplementing the execution loop outside Shiro.
+- Mixing application logs with trace events.
+- Continuing a run manually after an approval pause.

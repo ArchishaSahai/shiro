@@ -1,51 +1,53 @@
 ---
 title: Introduction
-description: Build production-ready TypeScript agents with Shiro.
+description: Learn the Shiro runtime model before wiring agents into an application.
 ---
 
 # Shiro
 
-Shiro is a production-ready TypeScript Agent SDK for building reliable AI systems.
-It abstracts the orchestration layer so application developers can focus on
-instructions, tools, and business logic.
+Shiro is a TypeScript runtime for agent execution. It owns the loop that decides when to call a
+provider, execute a tool, pause for approval, switch agents, read memory, validate output, and
+emit trace events.
 
-Shiro manages the hard parts:
+Your application defines the workflow. Shiro runs it.
 
-- execution lifecycle
-- provider abstraction
-- tool loops
-- multi-agent handoffs
-- human approval
-- sessions and memory
-- structured outputs
-- tracing and observability
+## What Shiro gives you
 
-## Design Goals
+- a long-lived `Engine` for shared runtime services
+- a per-run `Runner` for execution state
+- typed tools with lifecycle events
+- provider adapters behind one contract
+- sessions and memory for durable context
+- handoffs between agents
+- approval pauses for risky actions
+- structured output validation
+- traces that Studio and exporters can consume
 
-Shiro is designed around a few stable ideas:
+## Why it exists
 
-- **Small public surface**: public contracts are explicit and framework-owned.
-- **Provider independence**: OpenAI, Anthropic, Gemini, Ollama, and other providers plug in.
-- **Typed developer experience**: tools and structured outputs preserve TypeScript inference.
-- **Event-driven extension**: tracing, Studio, CLI, and integrations consume lifecycle events.
-- **Composable safety**: approval, guardrails, memory, and validation are execution stages.
+Most agent projects begin as a provider call and a tool function. The hard part comes later:
+timeouts, retries, handoffs, approvals, memory, debugging, and explaining what happened when a
+run fails. Shiro puts those concerns in the runtime instead of scattering them through API
+routes, queues, and one-off logging code.
 
-## Mental Model
+## Mental model
 
 ```txt
-Developer
-  |
-  v
-Agent
-  |
-  v
-Engine
-  |
-  v
-Runner
-  |
-  v
-Provider + Tools + Memory + Approval + Handoffs + Tracing
+Engine -> Runner -> Provider -> Tools -> Approvals -> Memory -> Output -> Trace
 ```
 
-Start with [Installation](/docs/installation), then run the [Quick Start](/docs/quick-start).
+The engine is long-lived. A runner is created for one execution. The trace records what the
+runner did.
+
+## When to use Shiro
+
+Use Shiro when your agent needs more than a single model call: tools, sessions, approval,
+handoffs, structured output, or run inspection.
+
+If you only need a one-off completion, call the provider directly.
+
+## Next steps
+
+Start with [Installation](/docs/installation), then build the first run in
+[Quick Start](/docs/quick-start). Read [Architecture](/docs/architecture) before adding memory,
+handoffs, or Studio.

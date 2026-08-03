@@ -1,27 +1,55 @@
 ---
 title: Engine
-description: The long-lived orchestration service.
+description: The long-lived runtime service that creates and observes runs.
 ---
 
 # Engine
 
-`Engine` owns shared execution services and exposes the public execution entrypoint.
+The `Engine` is the stable entrypoint for Shiro. It owns shared services and creates runners
+for individual executions.
 
 ```ts
-const engine = new Engine();
-const result = await engine.execute(agent, "Hello");
+const engine = new Engine({
+  providers,
+  plugins,
+  memory,
+  approvals,
+});
 ```
 
-## Responsibilities
+## What it owns
 
-- install plugins
-- own registries
-- create runners
-- resolve providers
-- expose execution
-- hold shared services
+- provider registry
+- plugin lifecycle
+- tool and agent registries
+- session and memory services
+- approval services
+- event bus
+- trace exporters
 
-## Non-Responsibilities
+## Why it exists
 
-Engine does not contain the execution loop, call providers directly, execute tools, or implement
-memory, tracing, approval, or handoff behavior.
+Without a long-lived engine, every request handler has to rebuild the same orchestration
+services. That makes tracing inconsistent and makes plugins hard to reason about.
+
+## When to create it
+
+Create the engine during application startup. Reuse it across requests and jobs.
+
+## What it does not do
+
+The engine does not run the loop directly. A runner owns one execution. The engine creates the
+runner, passes shared services to it, and receives events from it.
+
+## Best practices
+
+- Create one engine per process or worker.
+- Keep credentials in provider configuration.
+- Register plugins before accepting traffic.
+- Export traces from the engine event stream.
+
+## Common mistakes
+
+- Creating an engine for every HTTP request.
+- Storing user-specific state on the engine.
+- Calling providers directly from code that should run through Shiro.

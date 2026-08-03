@@ -8,6 +8,7 @@
     "declarationMap": false,
     "incremental": true,
     "jsx": "preserve",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
@@ -20,6 +21,6 @@
       }
     ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "*.mjs", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

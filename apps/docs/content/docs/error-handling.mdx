@@ -1,26 +1,49 @@
 ---
 title: Error Handling
-description: Understand Shiro's error hierarchy.
+description: Understand provider errors, tool failures, validation errors, approval rejection, and run failures.
 ---
 
 # Error Handling
 
-Shiro maps framework and integration failures into typed error classes.
+Shiro treats runtime failures by where they happen. A provider timeout, a rejected approval,
+a failed tool, and an invalid output schema need different handling.
 
-- `ConfigurationError`
-- `ValidationError`
-- `RuntimeError`
-- `ProviderError`
-- `ToolExecutionError`
-- `ToolNotFoundError`
-- `GuardrailViolationError`
-- `SessionError`
-- `MemoryError`
-- `ApprovalError`
-- `ApprovalRejectedError`
-- `HandoffError`
-- `MiddlewareError`
-- `PluginError`
-- `TimeoutError`
+## Error categories
 
-Provider packages should never leak raw SDK errors. They should map failures into Shiro errors.
+| Category | Meaning |
+| --- | --- |
+| Provider error | The model adapter failed or timed out. |
+| Tool error | Tool execution failed or returned invalid data. |
+| Approval rejection | A reviewer rejected a requested action. |
+| Validation error | Final output did not match the schema. |
+| Runtime error | The runner could not continue safely. |
+
+## Why categories matter
+
+Retries are not safe everywhere. A provider call may be retried. A refund tool should not retry
+unless the operation is idempotent. Approval rejection should usually become a user-facing
+outcome, not an exception.
+
+## Example
+
+```ts
+try {
+  await engine.execute(agent, input);
+} catch (error) {
+  // Inspect the trace before deciding whether to retry.
+}
+```
+
+## Best practices
+
+- Inspect the trace before retrying.
+- Preserve run IDs in error responses.
+- Treat approval rejection as a valid result.
+- Add idempotency to mutating tools.
+- Normalize provider errors at the adapter boundary.
+
+## Common mistakes
+
+- Catching everything as one generic error.
+- Retrying writes automatically.
+- Losing the trace when a run fails.

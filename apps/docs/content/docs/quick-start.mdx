@@ -1,51 +1,82 @@
 ---
 title: Quick Start
-description: Create an engine, install OpenAI, define an agent, and execute a run.
+description: Create an engine, define an agent, add a tool, and inspect the run.
 ---
 
 # Quick Start
 
-This example performs one real model execution through Shiro.
+This guide creates one agent with one tool. The goal is not to build a full application; it is
+to see how Shiro moves execution through the runtime.
+
+## 1. Create an engine
+
+The engine owns shared runtime services. Create it once and reuse it.
 
 ```ts
-import { Agent, Engine } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
-import { config as loadEnv } from "dotenv";
+import { Engine } from "@shiro/core";
+import { openai } from "@shiro/openai";
 
-loadEnv();
+const engine = new Engine({
+  providers: [openai({ model: "gpt-5" })],
+});
+```
 
-const engine = new Engine();
+## 2. Define a tool
 
-engine.use(
-  new OpenAIPlugin({
-    apiKey: process.env.OPENAI_API_KEY!,
-    model: process.env.OPENAI_MODEL ?? "gpt-5",
-  })
-);
+Tools are typed side effects. They run inside the Shiro lifecycle, so they can be traced,
+timed out, approved, or retried.
+
+```ts
+import { tool } from "@shiro/core";
+
+const weather = tool({
+  name: "weather",
+  description: "Look up current weather for a city.",
+  execute: async ({ city }: { city: string }) => {
+    return { city, summary: "Clear", temperatureC: 27 };
+  },
+});
+```
+
+## 3. Define an agent
+
+Agents describe behavior. Avoid storing user state on the agent itself.
+
+```ts
+import { Agent } from "@shiro/core";
 
 const agent = new Agent({
-  name: "Assistant",
-  instructions: "You are a helpful AI assistant.",
-  provider: "openai",
+  name: "support",
+  instructions: "Help users with concise, factual answers.",
+  tools: [weather],
 });
+```
 
-const result = await engine.execute(agent, "Hello!");
+## 4. Execute a run
 
+```ts
+const result = await engine.execute(agent, "Should I bring an umbrella in Pune?");
 console.log(result.output);
 ```
 
-## What Happens
+## What happens
 
-```txt
-engine.execute(agent, input)
-  -> create Runner
-  -> prepare context
-  -> resolve provider
-  -> call provider
-  -> validate final output
-  -> persist memory/session when configured
-  -> emit traceable lifecycle events
-  -> return RunResult
-```
+- the engine creates a runner
+- the runner prepares session context
+- the provider receives the agent instructions and current messages
+- the model may request the weather tool
+- Shiro executes the tool and records a span
+- the final answer is returned with trace data
 
-`Engine` is long-lived. Each call creates a new `Runner`.
+## Best practices
+
+- Keep the engine outside request handlers.
+- Keep tools small and typed.
+- Add tracing before adding multiple agents.
+- Use sessions when a conversation spans more than one request.
+
+## Common mistakes
+
+- Calling tools directly from application code.
+- Letting the model invent tool argument shapes.
+- Recreating the engine for every run.

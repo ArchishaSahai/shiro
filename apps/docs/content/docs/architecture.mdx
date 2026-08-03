@@ -1,58 +1,88 @@
 ---
 title: Architecture
-description: Understand the Shiro execution architecture and extension boundaries.
+description: How Shiro moves a run through agents, providers, tools, memory, approvals, traces, and Studio.
 ---
 
 # Architecture
 
-Shiro keeps orchestration cohesive without making any single object responsible for everything.
+Shiro separates long-lived services from per-run execution. The `Engine` owns registries,
+plugins, memory services, approval services, and event buses. A `Runner` is created for one
+execution and moves through provider calls, tool calls, handoffs, approvals, output validation,
+and trace emission.
 
-```txt
-Engine
-  |
-  v
-Runner
-  |
-  v
-Execution Loop
-  |
-  v
-Provider
-  |
-  v
-Tool Loop
-  |
-  v
-Handoff
-  |
-  v
-Approval
-  |
-  v
-Memory
-  |
-  v
-Structured Output
-  |
-  v
-Tracing
-```
+<ArchitectureDiagram />
+
+## Why the split exists
+
+Agent systems usually fail when application code becomes the execution loop. Provider calls,
+tool retries, handoffs, approval pauses, and memory persistence end up scattered across route
+handlers and background jobs. Shiro keeps those concerns inside the runtime so your application
+defines the workflow instead of coordinating every transition.
 
 ## Engine
 
-`Engine` owns long-lived services: provider registry, plugin manager, shared tool registry,
-agent registry, memory/session services, approval services, and event buses.
+`Engine` is the long-lived service container. Create it once for a process, install providers
+and plugins, and reuse it for many runs.
 
-It does not execute providers or tools.
+Use the engine for:
+
+- registering providers and plugins
+- owning shared memory and approval services
+- creating runners
+- exposing the public execution API
+- publishing events for Studio and trace exporters
+
+Do not put per-user state on the engine. Use sessions and run context for that.
 
 ## Runner
 
-`Runner` owns one execution. It coordinates state transitions, messages, tools, handoffs,
-approval, memory loading/persistence, and final output validation.
+`Runner` owns one execution. It keeps the current messages, tool state, handoff state,
+approval waits, output validation attempts, and emitted events together.
 
-It is created by `Engine.execute()` and is not manually managed by application code.
+The runner exists so a run can be inspected after it completes. A trace is not a log file that
+you bolt on later; it is a structured record of what the runner did.
 
-## Events and Traces
+## Providers
 
-Runner emits lifecycle events. `TraceManager` listens to those events and builds trace snapshots.
-This keeps tracing provider-independent and avoids coupling observability to the execution loop.
+Providers translate Shiro requests into model API calls. The provider contract is deliberately
+smaller than the engine contract. It should not know about memory, Studio, approval queues, or
+agent handoffs.
+
+## Tools
+
+Tools run inside the execution lifecycle. That means a tool call can be traced, approved,
+retried, timed out, or handed to Studio without each application re-implementing the same
+control flow.
+
+## Memory and sessions
+
+Memory is loaded before the provider call needs it and persisted after the run produces useful
+state. Sessions hold conversation history and durable context without changing the agent
+definition.
+
+## Guardrails and approvals
+
+Guardrails decide whether a run or tool call should continue. Approvals are explicit pauses in
+the run. The runner records the pause, the reviewer decision, and the continuation.
+
+## Studio
+
+Studio consumes the same events your code can subscribe to: provider calls, tool spans, handoffs,
+approval waits, memory reads, memory writes, validation attempts, and final output.
+
+## Best practices
+
+- Keep the engine long-lived.
+- Keep agents declarative.
+- Put user-specific state in sessions.
+- Treat tools as typed side effects.
+- Trace every run you expect to debug.
+- Use approvals for actions that change external systems.
+
+## Common mistakes
+
+- Creating a new engine for every request.
+- Calling providers directly from tools.
+- Storing user state on the agent.
+- Treating traces as plain text logs.
+- Implementing handoffs outside the runner.

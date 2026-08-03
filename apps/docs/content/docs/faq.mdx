@@ -1,0 +1,38 @@
+---
+title: FAQ
+description: Practical answers about Shiro's runtime model, Studio, providers, tools, and traces.
+---
+
+# FAQ
+
+## Is Shiro a provider wrapper?
+
+No. Provider adapters are one part of the runtime. Shiro also owns the run lifecycle: tools,
+handoffs, approvals, sessions, memory, output validation, and trace emission.
+
+## Do I need Studio?
+
+No. The runtime works without Studio. Studio is useful when you need to inspect runs, review
+approvals, compare traces, or debug tool behavior.
+
+## Can I use my own model provider?
+
+Yes. Implement the provider contract and register it with the engine. The rest of the runtime
+does not need to know which vendor fulfilled the request.
+
+## Where should I store user state?
+
+Use sessions and memory. Do not mutate agent definitions with user-specific state.
+
+## Are tool calls retried automatically?
+
+Only when configured and safe. Mutating tools should use idempotency before retries are enabled.
+
+## How do I debug a bad answer?
+
+Start with the trace. Check the provider input, tool arguments, memory reads, handoffs, approval
+decisions, and output validation attempts in order.
+
+## Is approval rejection an error?
+
+Not necessarily. Rejection is a normal runtime outcome for tools that require review.

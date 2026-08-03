@@ -1,18 +1,45 @@
 ---
 title: Streaming
-description: Provider-level streaming support.
+description: Consume run events as they happen instead of waiting for final output.
 ---
 
 # Streaming
 
-Providers may expose `stream()`.
+Streaming exposes execution while the run is still moving. You can show text deltas, tool
+activity, approval waits, handoffs, memory events, and final output from the same stream.
+
+## Why streaming is separate from providers
+
+Provider streaming is only one part of a run. Shiro streaming includes runtime events that
+happen before and after provider calls.
+
+## Example
 
 ```ts
-for await (const chunk of provider.stream(request, context)) {
-  console.log(chunk.message.content);
+for await (const event of engine.stream(agent, input)) {
+  console.log(event.type, event);
 }
 ```
 
-The public engine streaming API is intentionally separate from the provider contract. This lets Shiro
-support streaming final text, structured streaming, tool-call streams, and trace streams without
-changing provider adapters.
+## When to use streaming
+
+Use streaming when the user or operator needs to see progress:
+
+- long tool calls
+- multi-agent handoffs
+- approval waits
+- Studio timelines
+- terminal or CLI output
+
+## Best practices
+
+- Render event types differently.
+- Keep text deltas separate from trace events.
+- Do not assume the first event is model text.
+- Treat approval waits as stream states.
+
+## Common mistakes
+
+- Streaming provider text only.
+- Hiding tool failures until the end.
+- Dropping run IDs from stream events.

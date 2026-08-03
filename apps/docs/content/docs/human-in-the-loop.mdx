@@ -1,24 +1,47 @@
 ---
-title: Human-in-the-Loop
-description: Require approval before sensitive tool execution.
+title: Human-in-the-loop
+description: Pause runs for reviewer decisions before risky tools continue.
 ---
 
-# Human-in-the-Loop
+# Human-in-the-loop
 
-Tools can require approval before execution.
+Human-in-the-loop control means a run can pause before an action is executed. The pause is a
+runtime event, not a hidden callback.
+
+## Why approvals are runtime events
+
+Approvals need traceability. You should know which tool requested approval, which arguments it
+planned to use, who approved it, and how the run continued afterward.
+
+## Example
 
 ```ts
 const deploy = tool({
   name: "deploy",
-  description: "Deploy the current project.",
   requiresApproval: true,
-  approvalDescription: "Deploying changes affects production.",
-  parameters: z.object({
-    environment: z.string(),
-  }),
-  execute: async ({ environment }) => ({ deployed: true, environment }),
+  execute: deployService,
 });
 ```
 
-The runner delegates approval to `ApprovalManager`. UI providers such as Studio, Slack, Browser,
-or REST approval can implement `ApprovalProvider` without changing the runner.
+## When to require approval
+
+Use approvals for actions that change external systems:
+
+- deployments
+- refunds
+- account deletion
+- outbound messages
+- permission changes
+
+## Best practices
+
+- Approve the tool call, not the final answer.
+- Include enough context for reviewers.
+- Treat rejection as a normal outcome.
+- Show approvals in Studio during development.
+
+## Common mistakes
+
+- Asking the model to self-approve.
+- Retrying rejected actions.
+- Hiding approvals outside the trace.

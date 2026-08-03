@@ -1,26 +1,48 @@
 ---
 title: Multi-Agent
-description: Coordinate multiple agents with handoffs.
+description: Use handoffs when responsibility moves from one agent to another.
 ---
 
 # Multi-Agent
 
-Every Shiro agent uses the same `Agent` class. There are no manager or specialist subclasses.
-An agent becomes a coordinator by having handoffs and agent tools configured.
+Multi-agent execution in Shiro is built on handoffs. A handoff transfers control to another
+agent while the same runner continues the run.
+
+## Why handoffs exist
+
+Different domains often need different tools and rules. A support agent should not have direct
+access to billing mutation tools unless it is also responsible for billing decisions.
+
+## Example
 
 ```ts
-const researchAgent = new Agent({
-  name: "Research",
-  instructions: "Research technical details.",
-  provider: "openai",
-});
-
-const manager = new Agent({
-  name: "Manager",
-  instructions: "Coordinate the workflow.",
-  provider: "openai",
-  tools: [researchAgent],
+const support = new Agent({
+  name: "support",
+  handoffs: [billing, research],
 });
 ```
 
-The existing runner loop continues after handoff. Shiro does not create a second execution engine.
+## When to use handoffs
+
+Use a handoff when the active agent no longer has the right responsibility, tools, or approval
+policy.
+
+Good examples:
+
+- support to billing
+- triage to research
+- planning to deployment
+- incident intake to remediation
+
+## Best practices
+
+- Keep handoff targets explicit.
+- Trace every handoff.
+- Give specialist agents narrower tools.
+- Avoid circular handoff paths unless you can explain why.
+
+## Common mistakes
+
+- Creating many agents for prompt organization only.
+- Giving every agent every tool.
+- Implementing handoffs outside the runner.

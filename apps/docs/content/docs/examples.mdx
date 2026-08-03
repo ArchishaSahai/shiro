@@ -1,70 +1,62 @@
 ---
 title: Examples
-description: Practical Shiro examples.
+description: Small implementation patterns for common Shiro workflows.
 ---
 
 # Examples
 
-## Simple Chat Agent
+Use these examples as starting points. Each one shows a runtime behavior, not a full
+application.
+
+## Tool call
 
 ```ts
-const result = await engine.execute(agent, "Explain agents in one sentence.");
-```
-
-## Weather Tool
-
-```ts
-const weather = tool({
-  name: "weather",
-  description: "Get weather for a city.",
-  parameters: z.object({ city: z.string() }),
-  execute: async ({ city }) => ({ city, temperature: 24, condition: "cloudy" }),
+const lookupInvoice = tool({
+  name: "lookupInvoice",
+  execute: async ({ invoiceId }: { invoiceId: string }) => invoices.get(invoiceId),
 });
 ```
 
-## Multi-Agent Workflow
+Use this pattern for read-only lookups that the model can request during a run.
+
+## Approval gate
 
 ```ts
-const manager = new Agent({
-  name: "Manager",
-  instructions: "Delegate research tasks.",
-  provider: "openai",
-  tools: [researchAgent],
-});
-```
-
-## Human Approval
-
-```ts
-const sensitive = tool({
-  name: "deploy",
+const issueRefund = tool({
+  name: "issueRefund",
   requiresApproval: true,
-  parameters: z.object({ environment: z.string() }),
-  execute: async ({ environment }) => ({ deployed: environment }),
+  execute: refunds.issue,
 });
 ```
 
-## Structured Output
+Use this pattern for external mutations that need review.
+
+## Handoff
 
 ```ts
-const output = z.object({
-  city: z.string(),
-  temperature: z.number(),
+const support = new Agent({
+  name: "support",
+  handoffs: [billing],
 });
 ```
 
-## Memory Session
+Use this pattern when responsibility moves to another domain.
+
+## Trace export
 
 ```ts
-await engine.execute(agent, "Remember Sakura.", { sessionId });
-await engine.execute(agent, "What did I ask you to remember?", { sessionId });
+const result = await engine.execute(agent, input);
+await result.trace.export({ destination: "studio" });
 ```
 
-## Tracing Example
+Use this pattern before debugging complex behavior.
+
+## Session
 
 ```ts
-const traceManager = new TraceManager();
-const engine = new Engine({ events: traceManager });
-await engine.execute(agent, "Hello");
-console.log(await traceManager.export(new JsonTraceExporter()));
+await engine.execute(agent, input, {
+  sessionId: "customer_123",
+});
 ```
+
+Use this pattern for multi-turn conversations and durable context.

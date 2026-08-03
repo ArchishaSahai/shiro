@@ -1,7 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { CheckCircle2, Clipboard, Code2, Timer, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Terminal } from "@/components/ui/terminal";
 import { formatDuration, stringifyJson, type StudioRunTrace } from "@/lib/trace-utils";
 
 export function ToolInspector({
@@ -16,41 +23,105 @@ export function ToolInspector({
     trace.toolExecutions[0];
 
   return (
-    <Card>
+    <Card className="min-h-[460px]">
       <CardHeader>
-        <CardTitle>Tool Inspector</CardTitle>
+        <SectionHeading
+          actions={
+            <span className="text-xs text-white/40 font-mono">
+              {String(trace.toolExecutions.length)} calls
+            </span>
+          }
+          description="Inspects tool input, serialized output, status, and execution time. Use it to debug tool behavior and model arguments."
+          icon={Wrench}
+        >
+          Tool Inspector
+        </SectionHeading>
       </CardHeader>
       <CardContent>
         {tool === undefined ? (
-          <p className="text-sm text-zinc-500">No tool execution in this trace.</p>
+          <EmptyState
+            action="Select a trace with tool calls"
+            description="Tool arguments, outputs, status, and timings will appear here after a tool is invoked."
+            icon={Wrench}
+            title="No tool execution"
+          />
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase text-zinc-500">Tool</p>
-                <p className="font-medium">{tool.toolName}</p>
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+            initial={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="flex flex-col gap-3 rounded-2xl border border-white/[.08] bg-white/[.02] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[.06] text-white">
+                  <Wrench aria-hidden="true" className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase text-white/40 font-mono">Tool</p>
+                  <p className="truncate font-semibold text-white">{tool.toolName}</p>
+                </div>
               </div>
-              <Badge tone={tool.status === "completed" ? "success" : "danger"}>{tool.status}</Badge>
+              <div className="flex flex-wrap gap-2">
+                <Badge tone={tool.status === "completed" ? "success" : "danger"}>
+                  {tool.status}
+                </Badge>
+                <Badge>{formatDuration(tool.durationMs)}</Badge>
+              </div>
             </div>
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <Panel title="Arguments" value={stringifyJson(tool.arguments ?? {})} />
-              <Panel title="Result" value={stringifyJson(tool.serializedResult ?? null)} />
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Stat icon={Timer} label="Duration" value={formatDuration(tool.durationMs)} />
+              <Stat icon={CheckCircle2} label="Selected" value={selectedTool ?? tool.toolName} />
             </div>
-            <p className="text-xs text-zinc-500">Duration: {formatDuration(tool.durationMs)}</p>
-          </div>
+            <Tabs defaultValue="arguments">
+              <TabsList className="mb-3">
+                <TabsTrigger icon={Code2} value="arguments">
+                  Arguments
+                </TabsTrigger>
+                <TabsTrigger icon={Clipboard} value="result">
+                  Result
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="arguments">
+                <JsonPanel title="Arguments" value={stringifyJson(tool.arguments ?? {})} />
+              </TabsContent>
+              <TabsContent value="result">
+                <JsonPanel title="Result" value={stringifyJson(tool.serializedResult ?? null)} />
+              </TabsContent>
+            </Tabs>
+          </motion.div>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function Panel({ title, value }: { readonly title: string; readonly value: string }) {
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  readonly icon: typeof Timer;
+  readonly label: string;
+  readonly value: string;
+}) {
   return (
-    <div>
-      <p className="mb-2 text-xs uppercase text-zinc-500">{title}</p>
-      <pre className="max-h-48 overflow-auto rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">
-        {value}
-      </pre>
+    <div className="rounded-2xl border border-white/[.08] bg-white/[.02] p-3">
+      <Icon aria-hidden="true" className="mb-3 h-4 w-4 text-white/40" />
+      <p className="text-xs uppercase text-white/40 font-mono">{label}</p>
+      <p className="mt-1 truncate font-semibold text-white">{value}</p>
     </div>
+  );
+}
+
+function JsonPanel({ title, value }: { readonly title: string; readonly value: string }) {
+  return (
+    <Terminal title={title.toLowerCase()} copyText={value}>
+      <ScrollArea className="max-h-72">
+        <pre className="text-xs leading-relaxed text-white/90">
+          <code>{value}</code>
+        </pre>
+      </ScrollArea>
+    </Terminal>
   );
 }

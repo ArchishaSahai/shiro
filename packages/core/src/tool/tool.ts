@@ -413,6 +413,7 @@ async function withTimeout<TValue>(
   }
 
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let abortHandler: (() => void) | undefined;
 
   try {
     return await Promise.race([
@@ -427,23 +428,26 @@ async function withTimeout<TValue>(
           );
         }, timeoutMs);
 
-        signal?.addEventListener(
-          "abort",
-          () => {
+        if (signal !== undefined) {
+          abortHandler = () => {
             reject(
               new ToolExecutionError({
                 code: ShiroErrorCode.ToolExecution,
                 message: "Tool execution was cancelled.",
               })
             );
-          },
-          { once: true }
-        );
+          };
+          signal.addEventListener("abort", abortHandler, { once: true });
+        }
       }),
     ]);
   } finally {
     if (timeout !== undefined) {
       clearTimeout(timeout);
+    }
+
+    if (signal !== undefined && abortHandler !== undefined) {
+      signal.removeEventListener("abort", abortHandler);
     }
   }
 }

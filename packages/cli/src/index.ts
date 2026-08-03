@@ -4,6 +4,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import boxen from "boxen";
 import chalk from "chalk";
 import { Command } from "commander";
@@ -149,7 +150,9 @@ program
     console.log(VERSION);
   });
 
-await program.parseAsync(process.argv);
+if (isCliEntrypoint()) {
+  await program.parseAsync(process.argv);
+}
 
 async function initCommand(name: string | undefined, options: InitCommandOptions): Promise<void> {
   const answers = options.yes ? defaultsForInit(options) : await promptForInit(name, options);
@@ -595,6 +598,11 @@ function findWorkspaceRoot(): string {
     current = parent;
   }
   return current;
+}
+
+function isCliEntrypoint(): boolean {
+  const entrypoint = process.argv[1];
+  return entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).href;
 }
 
 function installCommandFor(packageManager: PackageManager): string {
