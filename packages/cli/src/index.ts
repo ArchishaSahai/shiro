@@ -2,10 +2,20 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import boxen from "boxen";
 import chalk from "chalk";
 import { Command } from "commander";
@@ -19,9 +29,9 @@ const REQUIRE = createRequire(import.meta.url);
 const PROVIDERS: readonly ProviderSummary[] = [
   {
     configKeys: ["OPENAI_API_KEY"],
-    dependency: "@shiro/openai",
+    dependency: "@shiro-sdk/openai",
     displayName: "OpenAI",
-    packageName: "@shiro/openai",
+    packageName: "@shiro-sdk/openai",
     providerId: "openai",
     packageDir: "packages/openai",
   },
@@ -82,7 +92,7 @@ const program = new Command();
 
 program
   .name("shiro")
-  .description("Developer tooling for Shiro agent projects. Package: @shiro/cli")
+  .description("Developer tooling for Shiro agent projects. Package: @shiro-sdk/cli")
   .version(VERSION, "-v, --version", "Display the Shiro CLI version.");
 
 program
@@ -175,7 +185,7 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
       install.warn("Project created, but dependency installation did not complete");
       printMuted(`Run ${installCommandFor(answers.packageManager)} inside ${targetName}.`);
       printMuted(
-        "If packages are not on npm yet, init from this monorepo so file: deps resolve, or publish @shiro/* first."
+        "If packages are not on npm yet, init from this monorepo so file: deps resolve, or publish @shiro-sdk/* first."
       );
     }
   }
@@ -204,22 +214,34 @@ async function devCommand(port: number | undefined): Promise<void> {
   }
 
   const configuredPort = port ?? (await readConfig()).studio?.port ?? 3001;
-  const studioRoot = resolveStudioRoot();
+  const installedStudioRoot = resolveStudioRoot();
 
-  if (studioRoot === null) {
+  if (installedStudioRoot === null) {
     throwUserError(
       [
-        "Could not find @shiro/studio.",
-        "Install it in this project:",
-        "  pnpm add -D @shiro/studio",
-        "Or reinstall the CLI (it depends on Studio):",
-        "  pnpm add -D @shiro/cli",
+        "Could not find Shiro Studio.",
+        "Studio ships with @shiro-sdk/cli — reinstall the CLI:",
+        "  pnpm add -D @shiro-sdk/cli",
+        "Or run shiro from the Shiro monorepo.",
       ].join("\n")
     );
   }
 
+  // Next.js cannot compile an app that lives under node_modules (pnpm virtual-store
+  // paths break webpack/SWC). Materialize a launch copy outside node_modules.
+  const studioRoot = prepareStudioLaunchRoot(installedStudioRoot);
+
   console.log(chalk.bold(`Launching Shiro Studio on http://localhost:${String(configuredPort)}`));
   console.log(chalk.dim(`Studio root: ${studioRoot}`));
+
+  const runtimePort = configuredPort + 1316;
+  const runtimeUrl = `ws://127.0.0.1:${String(runtimePort)}`;
+  console.log(chalk.dim(`Runtime hub: ${runtimeUrl}`));
+  console.log(
+    chalk.dim(
+      `Connect agents with: SHIRO_STUDIO_URL=${runtimeUrl} (set automatically by shiro init templates)`
+    )
+  );
 
   const child = spawn(
     process.execPath,
@@ -229,6 +251,9 @@ async function devCommand(port: number | undefined): Promise<void> {
       env: {
         ...process.env,
         PORT: String(configuredPort),
+        SHIRO_STUDIO_RUNTIME_PORT: String(runtimePort),
+        SHIRO_STUDIO_URL: runtimeUrl,
+        NEXT_PUBLIC_SHIRO_STUDIO_URL: runtimeUrl,
       },
       stdio: "inherit",
     }
@@ -249,7 +274,7 @@ async function infoCommand(): Promise<void> {
   const pluginNames = listInstalledPlugins(packageJson);
 
   console.log(chalk.bold("Shiro Info"));
-  printKeyValue("CLI", `${VERSION} (@shiro/cli)`);
+  printKeyValue("CLI", `${VERSION} (@shiro-sdk/cli)`);
   printKeyValue("Project", packageJson?.name ?? "unknown");
   printKeyValue("Version", packageJson?.version ?? "unknown");
   printKeyValue("Provider", config.provider ?? "not configured");
@@ -364,7 +389,14 @@ async function writeProject(
   await writeFile(join(targetDir, ".env.example"), envTemplate(), "utf8");
   await writeFile(
     join(targetDir, ".gitignore"),
-    ["node_modules", ".env", ".shiro-packages", ""].join("\n"),
+    ["node_modules", ".env", ".shiro", ".shiro-packages", ""].join("\n"),
+    "utf8"
+  );
+  // pnpm v11 stores allowBuilds in pnpm-workspace.yaml (even for single-package apps).
+  // Pre-approve Studio transitive native builds so `pnpm install` exits 0.
+  await writeFile(
+    join(targetDir, "pnpm-workspace.yaml"),
+    ["allowBuilds:", "  esbuild: true", "  sharp: true", "strictDepBuilds: false", ""].join("\n"),
     "utf8"
   );
   await writeFile(join(targetDir, "README.md"), readmeTemplate(targetName, answers), "utf8");
@@ -429,12 +461,12 @@ async function collectDiagnostics(): Promise<readonly Diagnostic[]> {
   diagnostics.push(
     studioRoot === null
       ? {
-          message: "@shiro/studio not found",
+          message: "Shiro Studio not found (expected via @shiro-sdk/cli)",
           status: "warning",
-          suggestion: "Install with: pnpm add -D @shiro/studio  (or pnpm add -D @shiro/cli)",
+          suggestion: "Reinstall the CLI: pnpm add -D @shiro-sdk/cli",
         }
       : {
-          message: `@shiro/studio found at ${studioRoot}`,
+          message: `Studio found at ${studioRoot}`,
           status: "ok",
         }
   );
@@ -534,11 +566,10 @@ function listInstalledPlugins(packageJson: PackageJson | null): readonly string[
   ];
   return dependencyNames.filter(
     (name) =>
-      name.startsWith("@shiro/") &&
-      name !== "@shiro/core" &&
-      name !== "@shiro/cli" &&
-      name !== "@shiro/studio" &&
-      name !== "@shiro/shared"
+      name.startsWith("@shiro-sdk/") &&
+      name !== "@shiro-sdk/core" &&
+      name !== "@shiro-sdk/cli" &&
+      name !== "@shiro-sdk/shared"
   );
 }
 
@@ -653,8 +684,12 @@ function ensureLocalPackagesBuilt(): void {
     return;
   }
 
-  const packages = ["packages/core", "packages/openai", "packages/cli"] as const;
+  const packages = ["packages/core", "packages/openai", "packages/cli", "apps/studio"] as const;
   for (const packageDir of packages) {
+    if (packageDir === "apps/studio") {
+      // Studio is a Next app — source + package.json are enough for `next dev`.
+      continue;
+    }
     const distEntry = join(workspaceRoot, packageDir, "dist", "index.js");
     if (existsSync(distEntry)) {
       continue;
@@ -671,32 +706,50 @@ function ensureLocalPackagesBuilt(): void {
 }
 
 function packageFilter(packageDir: string): string {
-  if (packageDir.endsWith("core")) return "@shiro/core";
-  if (packageDir.endsWith("openai")) return "@shiro/openai";
-  if (packageDir.endsWith("cli")) return "@shiro/cli";
+  if (packageDir.endsWith("core")) return "@shiro-sdk/core";
+  if (packageDir.endsWith("openai")) return "@shiro-sdk/openai";
+  if (packageDir.endsWith("cli")) return "@shiro-sdk/cli";
   return packageDir;
 }
 
 /**
- * Resolve @shiro/studio for consumer projects and monorepo development.
- * Order: project node_modules → CLI node_modules → monorepo apps/studio.
+ * Resolve Studio for `shiro dev`.
+ * Studio is a CLI dependency — not a project dependency.
+ * Prefer live monorepo `apps/studio` so local edits are what `shiro dev` runs.
  */
 function resolveStudioRoot(): string | null {
   const candidates: string[] = [];
 
-  const fromCwd = resolve(process.cwd(), "node_modules", "@shiro", "studio");
-  candidates.push(fromCwd);
-
-  try {
-    const resolved = REQUIRE.resolve("@shiro/studio/package.json");
-    candidates.push(dirname(resolved));
-  } catch {
-    // not linked to this CLI install
-  }
-
+  // Live monorepo source first — avoids stale vendored / node_modules copies.
   const workspaceRoot = findWorkspaceRootOptional();
   if (workspaceRoot !== null) {
     candidates.push(join(workspaceRoot, "apps", "studio"));
+  }
+
+  try {
+    const resolved = REQUIRE.resolve("@shiro-sdk/studio/package.json");
+    candidates.push(dirname(resolved));
+  } catch {
+    // Studio not linked next to this CLI install
+  }
+
+  // Monorepo init vendors Studio beside the CLI for local file: installs.
+  candidates.push(resolve(process.cwd(), ".shiro-packages", "shiro-studio"));
+
+  // Legacy: project may still have Studio linked; ignore for templates going forward.
+  candidates.push(resolve(process.cwd(), "node_modules", "@shiro-sdk", "studio"));
+
+  // When the CLI itself is vendored as file:.shiro-packages/shiro-cli
+  try {
+    const cliEntry = process.argv[1];
+    if (cliEntry !== undefined) {
+      const cliDir = dirname(cliEntry);
+      candidates.push(resolve(cliDir, "..", "shiro-studio"));
+      candidates.push(resolve(cliDir, "..", "..", "shiro-studio"));
+      candidates.push(resolve(cliDir, "..", "node_modules", "@shiro-sdk", "studio"));
+    }
+  } catch {
+    // ignore
   }
 
   for (const candidate of candidates) {
@@ -711,9 +764,102 @@ function resolveStudioRoot(): string | null {
   return null;
 }
 
+function isInsideNodeModules(path: string): boolean {
+  return path.split(/[\\/]/).includes("node_modules");
+}
+
+function canResolveNextFrom(studioRoot: string): boolean {
+  try {
+    createRequire(join(studioRoot, "package.json")).resolve("next/dist/bin/next");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Locate the node_modules directory that contains Studio's runtime deps (next, etc.).
+ * For pnpm, deps sit beside the package under the virtual-store node_modules.
+ */
+function findStudioDependencyNodeModules(studioRoot: string): string | null {
+  const candidates = [
+    join(studioRoot, "node_modules"),
+    dirname(studioRoot),
+    dirname(dirname(studioRoot)),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(join(candidate, "next", "package.json"))) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Next.js fails to compile JSX when the app root lives under node_modules
+ * (especially pnpm virtual-store paths with `+`). Copy Studio to `.shiro/studio-app`
+ * and junction its dependency node_modules in.
+ */
+function prepareStudioLaunchRoot(installedRoot: string): string {
+  if (!isInsideNodeModules(installedRoot) && canResolveNextFrom(installedRoot)) {
+    return installedRoot;
+  }
+
+  const depsNodeModules = findStudioDependencyNodeModules(installedRoot);
+  if (depsNodeModules === null) {
+    throwUserError(
+      [
+        "Found Shiro Studio but could not resolve its Next.js dependency.",
+        "Reinstall the CLI: pnpm add -D @shiro-sdk/cli",
+      ].join("\n")
+    );
+  }
+
+  const launchRoot = resolve(process.cwd(), ".shiro", "studio-app");
+  mkdirSync(launchRoot, { recursive: true });
+
+  const skip = new Set(["node_modules", ".next", ".git"]);
+  for (const entry of readdirSync(installedRoot)) {
+    if (skip.has(entry)) {
+      continue;
+    }
+    cpSync(join(installedRoot, entry), join(launchRoot, entry), { recursive: true });
+  }
+
+  const linkPath = join(launchRoot, "node_modules");
+  if (existsSync(linkPath)) {
+    rmSync(linkPath, { recursive: true, force: true });
+  }
+  symlinkSync(depsNodeModules, linkPath, process.platform === "win32" ? "junction" : "dir");
+
+  if (!canResolveNextFrom(launchRoot)) {
+    throwUserError(
+      [
+        "Prepared Studio launch directory but Next.js is still unresolved.",
+        `Launch root: ${launchRoot}`,
+      ].join("\n")
+    );
+  }
+
+  return launchRoot;
+}
+
 function isCliEntrypoint(): boolean {
   const entrypoint = process.argv[1];
-  return entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).href;
+  if (entrypoint === undefined) {
+    return false;
+  }
+
+  try {
+    // pnpm junctions mean argv path and import.meta.url can differ by symlink.
+    const entryReal = realpathSync(resolve(entrypoint)).toLowerCase();
+    const metaReal = realpathSync(fileURLToPath(import.meta.url)).toLowerCase();
+    return entryReal === metaReal;
+  } catch {
+    return false;
+  }
 }
 
 function installCommandFor(packageManager: PackageManager): string {
@@ -724,12 +870,12 @@ interface InstallSpecs {
   readonly cli: string;
   readonly core: string;
   readonly openai: string;
-  readonly studio: string;
 }
 
 /**
  * Prefer vendored local monorepo packages so `pnpm install` works before npm publish.
- * Copies built package contents and rewrites @shiro/* deps to sibling file: folders.
+ * Copies built package contents and rewrites @shiro-sdk/* deps to sibling file: folders.
+ * Studio is vendored only as a transitive dependency of the CLI — never as a project dep.
  */
 async function resolveInstallSpecs(targetDir: string): Promise<InstallSpecs> {
   const workspaceRoot = findWorkspaceRootOptional();
@@ -738,7 +884,6 @@ async function resolveInstallSpecs(targetDir: string): Promise<InstallSpecs> {
       cli: `^${VERSION}`,
       core: `^${VERSION}`,
       openai: `^${VERSION}`,
-      studio: `^${VERSION}`,
     };
   }
 
@@ -747,16 +892,15 @@ async function resolveInstallSpecs(targetDir: string): Promise<InstallSpecs> {
 
   vendorPackage(workspaceRoot, "packages/core", vendorDir, "shiro-core", []);
   vendorPackage(workspaceRoot, "packages/openai", vendorDir, "shiro-openai", [
-    { name: "@shiro/core", folder: "shiro-core" },
+    { name: "@shiro-sdk/core", folder: "shiro-core" },
   ]);
-  vendorPackage(workspaceRoot, "packages/cli", vendorDir, "shiro-cli", []);
   vendorPackage(workspaceRoot, "apps/studio", vendorDir, "shiro-studio", []);
+  vendorPackage(workspaceRoot, "packages/cli", vendorDir, "shiro-cli", []);
 
   return {
     core: "file:.shiro-packages/shiro-core",
     openai: "file:.shiro-packages/shiro-openai",
     cli: "file:.shiro-packages/shiro-cli",
-    studio: "file:.shiro-packages/shiro-studio",
   };
 }
 
@@ -802,6 +946,39 @@ function vendorPackage(
         cpSync(from, join(destination, fileName));
       }
     }
+
+    // Consumer installs are outside the monorepo — flatten tsconfig.
+    const studioTsconfigPath = join(destination, "tsconfig.json");
+    if (existsSync(studioTsconfigPath)) {
+      const studioTsconfig = JSON.parse(readFileSync(studioTsconfigPath, "utf8")) as {
+        extends?: string;
+        compilerOptions?: Record<string, unknown>;
+        include?: string[];
+        exclude?: string[];
+      };
+      delete studioTsconfig.extends;
+      studioTsconfig.compilerOptions = {
+        allowJs: true,
+        baseUrl: ".",
+        esModuleInterop: true,
+        incremental: true,
+        isolatedModules: true,
+        jsx: "preserve",
+        lib: ["DOM", "DOM.Iterable", "ES2023"],
+        module: "ESNext",
+        moduleDetection: "force",
+        moduleResolution: "Bundler",
+        noEmit: true,
+        paths: { "@/*": ["./*"] },
+        plugins: [{ name: "next" }],
+        resolveJsonModule: true,
+        skipLibCheck: true,
+        strict: true,
+        target: "ES2023",
+        ...(studioTsconfig.compilerOptions ?? {}),
+      };
+      writeFileSync(studioTsconfigPath, `${JSON.stringify(studioTsconfig, null, 2)}\n`, "utf8");
+    }
   }
 
   const vendoredPackageJsonPath = join(destination, "package.json");
@@ -824,7 +1001,7 @@ function vendorPackage(
 }
 
 function envTemplate(): string {
-  return "OPENAI_API_KEY=\n";
+  return ["OPENAI_API_KEY=", "SHIRO_STUDIO_URL=ws://127.0.0.1:4317", ""].join("\n");
 }
 
 function packageJsonTemplate(
@@ -847,14 +1024,13 @@ function packageJsonTemplate(
   return `${JSON.stringify(
     {
       dependencies: {
-        "@shiro/core": installSpecs.core,
-        "@shiro/openai": installSpecs.openai,
+        "@shiro-sdk/core": installSpecs.core,
+        "@shiro-sdk/openai": installSpecs.openai,
         dotenv: "^17.2.1",
         zod: "^4.0.0",
       },
       devDependencies: {
-        "@shiro/cli": installSpecs.cli,
-        "@shiro/studio": installSpecs.studio,
+        "@shiro-sdk/cli": installSpecs.cli,
         ...(answers.language === "typescript" ? { tsx: "^4.20.6", typescript: "^5.9.2" } : {}),
       },
       name,
@@ -899,10 +1075,13 @@ function configTemplate(answers: InitAnswers): string {
 
 function agentTemplate(answers: InitAnswers): string {
   return `import "dotenv/config";
-import { Agent, Engine } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Agent, Engine, TraceManager, connectStudio } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 
-const engine = new Engine();
+const studio = await connectStudio({ agentName: "Assistant" });
+const events = new TraceManager({ events: studio });
+
+const engine = new Engine({ events });
 
 engine.use(
   new OpenAIPlugin({
@@ -917,9 +1096,22 @@ const agent = new Agent({
   provider: "openai",
 });
 
-const result = await engine.execute(agent, "Hello!");
+studio.bind(async (prompt) => engine.execute(agent, prompt));
+studio.setAgentName(agent.name);
 
-console.log(result.output);
+// Keep the process alive so Studio can send prompts (Live Mode).
+console.log("Agent ready. Open Studio with: pnpm exec shiro dev");
+console.log(\`Studio URL: \${process.env.SHIRO_STUDIO_URL ?? "ws://127.0.0.1:4317"}\`);
+
+if (process.argv.includes("--once")) {
+  const result = await engine.execute(agent, "Hello!");
+  console.log(result.output);
+  process.exit(0);
+}
+
+await new Promise<never>(() => {
+  // Intentional: wait for Studio execute requests until the process is stopped.
+});
 `;
 }
 
@@ -949,6 +1141,6 @@ ${run} dev
 ${run} studio
 \`\`\`
 
-Studio inspects sample traces and imported JSON exports. See https://github.com/${GITHUB_REPO}.
+Studio inspects live agent runs over the local runtime hub, and falls back to Demo Mode traces when no agent is connected. See https://github.com/${GITHUB_REPO}.
 `;
 }

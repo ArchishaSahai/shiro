@@ -1,10 +1,10 @@
 {
-  "name": "@shiro/cli",
+  "name": "@shiro-sdk/cli",
   "version": "0.1.0",
   "description": "Command-line interface for Shiro.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
+  "homepage": "https://shiro-docs.vercel.app/docs/cli",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ArchishaSahai/shiro.git",
@@ -32,7 +32,9 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "publishConfig": {
     "access": "public"
@@ -51,6 +53,7 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
+    "@shiro-sdk/studio": "workspace:*",
     "@types/prompts": "^2.4.9",
     "rimraf": "^6.0.1"
   }

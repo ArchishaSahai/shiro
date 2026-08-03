@@ -1,50 +1,47 @@
-# @shiro/cli
+# @shiro-sdk/cli
 
-Command-line interface for Shiro. The npm package is **`@shiro/cli`** (the bare name `shiro` on npm is unrelated). The binary installed by this package is still named `shiro`.
+Command-line tooling for Shiro. Scaffolds projects, runs diagnostics, and launches Studio.
+
+The npm package name is **`@shiro-sdk/cli`**. The unscoped package `shiro` on npm is unrelated. The binary installed by this package is still named `shiro`.
 
 ## Install
 
 ```bash
-pnpm add -D @shiro/cli @shiro/studio
-# or
-pnpm dlx @shiro/cli init my-agent
+pnpm add -D @shiro-sdk/cli
 ```
 
-## Commands
+Or run without a permanent install:
 
 ```bash
-shiro init my-agent
-shiro dev
-shiro doctor
-shiro info
-shiro providers
-shiro plugins
-shiro version
+pnpm dlx @shiro-sdk/cli init my-agent
 ```
 
-## Quick Start
+## Minimal usage
 
 ```bash
-pnpm dlx @shiro/cli init my-agent
+pnpm dlx @shiro-sdk/cli init my-agent
 cd my-agent
-cp .env.example .env
-pnpm dev
-pnpm studio
+cp .env.example .env   # set OPENAI_API_KEY
+pnpm dev               # run the agent
+pnpm exec shiro dev    # open Studio (ships with the CLI)
 ```
 
-`shiro init` prompts for package manager, provider, model, and TypeScript or JavaScript. It scaffolds a runnable agent project and installs dependencies by default.
+Common commands: `shiro init`, `shiro dev`, `shiro doctor`, `shiro info`, `shiro providers`, `shiro plugins`.
 
-For non-interactive environments:
+## Documentation
 
-```bash
-pnpm dlx @shiro/cli init my-agent --yes --no-install
-```
+The [documentation website](https://shiro-docs.vercel.app/docs) is the source of truth.
 
-## Studio
+- [CLI](https://shiro-docs.vercel.app/docs/cli)
+- [Installation](https://shiro-docs.vercel.app/docs/installation)
+- [Studio](https://shiro-docs.vercel.app/docs/studio)
 
-`shiro dev` launches `@shiro/studio` from:
+## Links
 
-1. `./node_modules/@shiro/studio` in the current project
-2. the monorepo `apps/studio` package when developing inside this repository
+- [Documentation](https://shiro-docs.vercel.app/docs)
+- [GitHub repository](https://github.com/ArchishaSahai/shiro)
+- [Report issues](https://github.com/ArchishaSahai/shiro/issues)
 
-Install Studio in consumer projects with `pnpm add -D @shiro/studio` (also added by `shiro init`).
+## License
+
+MIT
