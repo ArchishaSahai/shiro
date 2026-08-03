@@ -1,41 +1,59 @@
 ---
 title: Migration
-description: Move existing agent code into Shiro without rewriting everything at once.
+description: Move an existing agent loop into Shiro in small, reversible steps.
 ---
 
 # Migration
 
-You do not need to move an entire agent system into Shiro in one step. Start by moving the
-execution loop, then bring tools, memory, approvals, and tracing under the runtime.
+You do not need to rewrite everything at once. Move the **execution loop** first, then fold in
+tools, sessions, approvals, and traces.
 
-## Step 1: wrap the provider
+## Step 1 — Provider through Shiro
 
-Keep your existing model choice, but call it through a Shiro provider. This makes provider
-calls visible to the runner and trace system.
+Keep your model vendor. Install the provider [plugin](/docs/plugins) and call
+`engine.execute` for one path that used to call the vendor SDK directly.
 
-## Step 2: move tools into Shiro
+**Success check:** one run completes with a `runId`.
 
-Convert direct function calls into typed tools. This gives the runtime a place to apply
-timeouts, approval checks, trace spans, and retries.
+## Step 2 — Tools
 
-## Step 3: introduce sessions
+Convert direct function calls into `tool()` definitions with `parameters`. Attach them to an
+[agent](/docs/agents).
 
-Move conversation history and durable context into sessions. Avoid storing user-specific
-state on the agent itself.
+**Success check:** tool spans appear in a [trace](/docs/tracing) / [Studio](/docs/studio).
 
-## Step 4: add approvals
+## Step 3 — Sessions
 
-Start with one risky tool, such as deploy, refund, delete, or send. Mark it as requiring
-approval and confirm the run pauses in Studio.
+Pass `sessionId` for multi-turn users. Stop storing history on the agent object.
 
-## Step 5: export traces
+**Success check:** a follow-up question uses prior context without prompt hacking.
 
-Export traces before changing behavior. A trace gives you a baseline for comparing the old
-system with the Shiro runtime.
+## Step 4 — Approvals
+
+Pick one risky tool (refund, delete, deploy). Set `requiresApproval: true`. Confirm the pause
+in Studio’s approval center.
+
+**Success check:** rejection does not execute the side effect.
+
+## Step 5 — Always export traces
+
+Export JSON (or your sink) before large behavior changes. Traces are the baseline for
+comparing old vs new.
+
+## Step 6 — Handoffs last
+
+Split agents only when tools or policy differ. Register specialists and attach a handoff
+strategy — see [Multi-Agent](/docs/multi-agent).
 
 ## Common mistakes
 
-- Migrating every tool at once.
-- Keeping provider calls outside the runner.
-- Treating memory as global application state.
-- Adding Studio only after something breaks.
+- Migrating every tool in one PR
+- Leaving a “temporary” direct provider call in the hot path
+- Adding Studio only after the first production incident
+- Treating memory as a global cache
+
+## Related
+
+- [Architecture](/docs/architecture)
+- [Examples](/docs/examples)
+- [CLI](/docs/cli) for local Studio

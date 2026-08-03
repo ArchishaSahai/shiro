@@ -1,0 +1,307 @@
+{
+  "aliases": ["support-agent", "examples/customer-support", "traces/customer-support"],
+  "agentName": "Support Triage",
+  "command": "shiro run support-agent",
+  "description": "Triage a billing invoice inquiry with tool use, handoff, and approval.",
+  "events": [
+    {
+      "id": "run_support_triage_a91e_run.started_0",
+      "offsetMs": 0,
+      "runId": "run_support_triage_a91e",
+      "type": "run.started",
+      "message": "$ shiro run support-agent",
+      "terminalKind": "command"
+    },
+    {
+      "id": "run_support_triage_a91e_engine.started_1",
+      "offsetMs": 180,
+      "runId": "run_support_triage_a91e",
+      "type": "engine.started",
+      "message": "✓ Engine started",
+      "terminalKind": "success",
+      "payload": {
+        "agentName": "Support Triage",
+        "model": "gpt-5",
+        "provider": "openai",
+        "sessionId": "session_support_182"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_provider.loading_2",
+      "offsetMs": 420,
+      "runId": "run_support_triage_a91e",
+      "type": "provider.loading",
+      "message": "→ Loading providers...",
+      "terminalKind": "event",
+      "payload": {
+        "provider": "openai"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_provider.connected_3",
+      "offsetMs": 780,
+      "runId": "run_support_triage_a91e",
+      "type": "provider.connected",
+      "message": "✓ OpenAI connected",
+      "terminalKind": "success",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_runner.creating_4",
+      "offsetMs": 980,
+      "runId": "run_support_triage_a91e",
+      "type": "runner.creating",
+      "message": "→ Creating runner...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_support_triage_a91e_memory.session_loaded_5",
+      "offsetMs": 1180,
+      "runId": "run_support_triage_a91e",
+      "type": "memory.session_loaded",
+      "message": "→ Loading session memory...",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "session_loaded",
+        "messageCount": 8,
+        "sessionId": "session_support_182"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_agent.calling_6",
+      "offsetMs": 1380,
+      "runId": "run_support_triage_a91e",
+      "type": "agent.calling",
+      "message": "→ Calling support agent...",
+      "terminalKind": "event",
+      "payload": {
+        "agentName": "Support Triage"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_provider.call.started_7",
+      "offsetMs": 1520,
+      "runId": "run_support_triage_a91e",
+      "type": "provider.call.started",
+      "message": "→ Provider call gpt-5",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "spanId": "provider:0"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_provider.call.completed_8",
+      "offsetMs": 1980,
+      "runId": "run_support_triage_a91e",
+      "type": "provider.call.completed",
+      "message": "✓ Provider responded (460ms)",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 460,
+        "finishReason": "tool_calls",
+        "inputTokens": 840,
+        "latencyMs": 460,
+        "model": "gpt-5",
+        "outputTokens": 120,
+        "provider": "openai",
+        "spanId": "provider:0",
+        "totalTokens": 960
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_tool.started_9",
+      "offsetMs": 2100,
+      "runId": "run_support_triage_a91e",
+      "type": "tool.started",
+      "message": "→ Tool lookupInvoice()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "invoice": "INV-8821"
+        },
+        "spanId": "tool:lookupInvoice",
+        "toolName": "lookupInvoice"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_tool.completed_10",
+      "offsetMs": 2480,
+      "runId": "run_support_triage_a91e",
+      "type": "tool.completed",
+      "message": "✓ invoice found",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 380,
+        "result": {
+          "amountDue": 128.4,
+          "status": "open"
+        },
+        "spanId": "tool:lookupInvoice",
+        "status": "completed",
+        "toolName": "lookupInvoice"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_memory.retrieved_11",
+      "offsetMs": 2600,
+      "runId": "run_support_triage_a91e",
+      "type": "memory.retrieved",
+      "message": "→ Memory retrieve customer context",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "retrieved",
+        "recordCount": 3,
+        "sessionId": "session_support_182"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_handoff.started_12",
+      "offsetMs": 2780,
+      "runId": "run_support_triage_a91e",
+      "type": "handoff.started",
+      "message": "→ Handoff → billing",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Billing Agent",
+        "reason": "Invoice context required.",
+        "sourceAgent": "Support Triage",
+        "spanId": "handoff:Support Triage:Billing Agent"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_approval.requested_13",
+      "offsetMs": 2980,
+      "runId": "run_support_triage_a91e",
+      "type": "approval.requested",
+      "message": "→ Approval requested",
+      "terminalKind": "warning",
+      "payload": {
+        "policy": "billing-handoff",
+        "spanId": "approval:handoff-billing",
+        "toolName": "handoff-billing"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_approval.granted_14",
+      "offsetMs": 3340,
+      "runId": "run_support_triage_a91e",
+      "type": "approval.granted",
+      "message": "✓ Approved",
+      "terminalKind": "success",
+      "payload": {
+        "approver": "Maya Chen",
+        "decision": "approval.granted",
+        "durationMs": 360,
+        "policy": "billing-handoff",
+        "spanId": "approval:handoff-billing",
+        "toolName": "handoff-billing"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_handoff.completed_15",
+      "offsetMs": 3480,
+      "runId": "run_support_triage_a91e",
+      "type": "handoff.completed",
+      "message": "✓ Handoff complete",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Billing Agent",
+        "durationMs": 700,
+        "reason": "Invoice context required.",
+        "sourceAgent": "Support Triage",
+        "spanId": "handoff:Support Triage:Billing Agent"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_provider.call.started_16",
+      "offsetMs": 3620,
+      "runId": "run_support_triage_a91e",
+      "type": "provider.call.started",
+      "message": "→ Provider call gpt-5",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "spanId": "provider:1"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_provider.call.completed_17",
+      "offsetMs": 4100,
+      "runId": "run_support_triage_a91e",
+      "type": "provider.call.completed",
+      "message": "✓ Response tokens streamed",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 480,
+        "estimatedCost": 0.018,
+        "finishReason": "completed",
+        "inputTokens": 1120,
+        "latencyMs": 480,
+        "outputTokens": 340,
+        "spanId": "provider:1",
+        "totalTokens": 1460
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_response.streaming_18",
+      "offsetMs": 4220,
+      "runId": "run_support_triage_a91e",
+      "type": "response.streaming",
+      "message": "→ Response generated",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_support_triage_a91e_memory.stored_19",
+      "offsetMs": 4340,
+      "runId": "run_support_triage_a91e",
+      "type": "memory.stored",
+      "message": "→ Storing turn in memory",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "stored",
+        "recordCount": 1,
+        "sessionId": "session_support_182"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_response.completed_20",
+      "offsetMs": 4480,
+      "runId": "run_support_triage_a91e",
+      "type": "response.completed",
+      "message": "Assistant response",
+      "terminalKind": "markdown",
+      "payload": {
+        "finalOutput": "# Invoice reconciliation complete\n\nI looked up **INV-8821** for account `acct_48` and confirmed the open balance.\n\n## Summary\n\n| Field | Value |\n| --- | --- |\n| Invoice | INV-8821 |\n| Status | Open |\n| Plan | Pro |\n| Amount due | $128.40 |\n\n## Recommended next steps\n\n1. Send the **billing reconciliation** macro to the customer\n2. Offer a one-click payment link for the outstanding balance\n3. Escalate to billing only if the charge is disputed\n\n> The handoff to **Billing** was approved after `lookupInvoice()` returned a match.\n\n```ts\nawait billing.sendMacro({\n  template: \"invoice-reconciliation\",\n  invoiceId: \"INV-8821\",\n});\n```\n\n- [x] Invoice found\n- [x] Handoff approved\n- [ ] Payment confirmed\n",
+        "markdown": "# Invoice reconciliation complete\n\nI looked up **INV-8821** for account `acct_48` and confirmed the open balance.\n\n## Summary\n\n| Field | Value |\n| --- | --- |\n| Invoice | INV-8821 |\n| Status | Open |\n| Plan | Pro |\n| Amount due | $128.40 |\n\n## Recommended next steps\n\n1. Send the **billing reconciliation** macro to the customer\n2. Offer a one-click payment link for the outstanding balance\n3. Escalate to billing only if the charge is disputed\n\n> The handoff to **Billing** was approved after `lookupInvoice()` returned a match.\n\n```ts\nawait billing.sendMacro({\n  template: \"invoice-reconciliation\",\n  invoiceId: \"INV-8821\",\n});\n```\n\n- [x] Invoice found\n- [x] Handoff approved\n- [ ] Payment confirmed\n"
+      }
+    },
+    {
+      "id": "run_support_triage_a91e_run.completed_21",
+      "offsetMs": 4600,
+      "runId": "run_support_triage_a91e",
+      "type": "run.completed",
+      "message": "✓ Run completed (2.4s)",
+      "terminalKind": "success",
+      "payload": {
+        "estimatedCost": 0.018,
+        "finalOutput": "# Invoice reconciliation complete\n\nI looked up **INV-8821** for account `acct_48` and confirmed the open balance.\n\n## Summary\n\n| Field | Value |\n| --- | --- |\n| Invoice | INV-8821 |\n| Status | Open |\n| Plan | Pro |\n| Amount due | $128.40 |\n\n## Recommended next steps\n\n1. Send the **billing reconciliation** macro to the customer\n2. Offer a one-click payment link for the outstanding balance\n3. Escalate to billing only if the charge is disputed\n\n> The handoff to **Billing** was approved after `lookupInvoice()` returned a match.\n\n```ts\nawait billing.sendMacro({\n  template: \"invoice-reconciliation\",\n  invoiceId: \"INV-8821\",\n});\n```\n\n- [x] Invoice found\n- [x] Handoff approved\n- [ ] Payment confirmed\n",
+        "finalStatus": "completed",
+        "inputTokens": 1960,
+        "markdown": "# Invoice reconciliation complete\n\nI looked up **INV-8821** for account `acct_48` and confirmed the open balance.\n\n## Summary\n\n| Field | Value |\n| --- | --- |\n| Invoice | INV-8821 |\n| Status | Open |\n| Plan | Pro |\n| Amount due | $128.40 |\n\n## Recommended next steps\n\n1. Send the **billing reconciliation** macro to the customer\n2. Offer a one-click payment link for the outstanding balance\n3. Escalate to billing only if the charge is disputed\n\n> The handoff to **Billing** was approved after `lookupInvoice()` returned a match.\n\n```ts\nawait billing.sendMacro({\n  template: \"invoice-reconciliation\",\n  invoiceId: \"INV-8821\",\n});\n```\n\n- [x] Invoice found\n- [x] Handoff approved\n- [ ] Payment confirmed\n",
+        "outputTokens": 460,
+        "totalTokens": 2420
+      }
+    }
+  ],
+  "id": "customer-support",
+  "model": "gpt-5",
+  "provider": "openai",
+  "sessionId": "session_support_182",
+  "title": "Customer Support"
+}

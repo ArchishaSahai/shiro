@@ -1,49 +1,84 @@
 ---
-title: Memory Sessions
-description: Persist conversation and retrieved context without mutating agents.
+title: Memory & Sessions
+description: Durable conversation context without mutating agent definitions.
 ---
 
-# Memory Sessions
+# Memory & Sessions
 
-Sessions hold durable context for a user, workflow, or conversation. Memory is the runtime
-layer that retrieves and persists useful context around a run.
+[Agents](/docs/agents) should be reusable. [Sessions](/docs/memory-sessions) and memory keep
+**who this conversation is** separate from **what this role can do**.
 
-## Why sessions exist
+## Why the split exists
 
-Agents should be reusable definitions. If you put conversation state on an agent, the agent
-becomes tied to one user. Sessions keep state separate from behavior.
+If you rewrite agent instructions per user, or stash chat history on the agent object, you
+cannot safely share that agent across requests or register it for handoffs. Sessions carry
+identity. Memory retrieval feeds the runner. Agents stay configuration.
 
-## Example
+```txt
+Agent  = role + tools + output contract
+Session = conversation / user continuity
+Memory  = retrieve + store + compact around a run
+```
+
+## Passing a session
 
 ```ts
-await engine.execute(agent, input, {
-  sessionId: "support_1842",
+await engine.execute(agent, "What was the last invoice we discussed?", {
+  sessionId: "customer_48",
 });
 ```
 
+Use a stable id per conversation or customer. Reusing the wrong id mixes users. Creating a new
+id every message disables continuity.
+
 ## What belongs in a session
 
-- conversation history
-- user-specific context
-- prior tool results worth reusing
-- decisions that affect future runs
+- Conversation history worth replaying
+- User-specific facts the agent should remember
+- Prior tool results that are expensive to refetch
+- Decisions that affect later turns
 
-## What does not belong
+## What does not
 
-- provider credentials
-- agent instructions
-- global application state
-- large raw documents
+- Provider API keys
+- Agent instructions
+- Global feature flags
+- Entire document corpora (retrieve summaries or ids instead)
+
+## Memory operations you will see in traces
+
+| Kind             | Meaning                       |
+| ---------------- | ----------------------------- |
+| `session_loaded` | Session attached to the run   |
+| `retrieved`      | Records pulled into context   |
+| `stored`         | New facts / turns persisted   |
+| `compacted`      | History reduced to fit limits |
+
+[Studio](/docs/studio)’s memory explorer surfaces these as the stream emits them. See
+[Tracing](/docs/tracing).
+
+## Compaction
+
+Long sessions blow context windows and hide the useful signal. Compaction exists so the runner
+can shrink history without deleting the session. Prefer summarizing decisions over truncating
+mid-tool-result.
 
 ## Best practices
 
-- Use stable session IDs.
-- Summarize long histories.
-- Store source metadata with retrieved facts.
-- Trace memory reads and writes.
+- One session id per conversation boundary
+- Trace memory reads when answers look “forgetful”
+- Store provenance with retrieved facts (source, timestamp)
+- Keep raw blobs out of prompts — store references
 
 ## Common mistakes
 
-- Treating memory as a prompt dump.
-- Persisting every token from every run.
-- Mixing sessions across users.
+- Dumping every token into memory “for safety”
+- Mixing tenants in one session id
+- Putting memory on the agent config for a single user
+- Debugging memory issues without opening Studio / traces
+
+## Related
+
+- [Mental Model](/docs/core-concepts)
+- [Runner](/docs/runner)
+- [Studio](/docs/studio)

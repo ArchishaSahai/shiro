@@ -1,0 +1,304 @@
+{
+  "aliases": ["travel-agent", "examples/travel-agent", "traces/travel-agent"],
+  "agentName": "Travel Concierge",
+  "command": "shiro run travel-agent",
+  "description": "Plan a multi-day Tokyo trip with weather and booking tools.",
+  "events": [
+    {
+      "id": "run_travel_tokyo_88_run.started_0",
+      "offsetMs": 0,
+      "runId": "run_travel_tokyo_88",
+      "type": "run.started",
+      "message": "$ shiro run travel-agent",
+      "terminalKind": "command"
+    },
+    {
+      "id": "run_travel_tokyo_88_engine.started_1",
+      "offsetMs": 140,
+      "runId": "run_travel_tokyo_88",
+      "type": "engine.started",
+      "message": "✓ Engine started",
+      "terminalKind": "success",
+      "payload": {
+        "agentName": "Travel Concierge",
+        "model": "gpt-5",
+        "provider": "openai",
+        "sessionId": "session_travel_tokyo"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_provider.loading_2",
+      "offsetMs": 320,
+      "runId": "run_travel_tokyo_88",
+      "type": "provider.loading",
+      "message": "→ Loading providers...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_travel_tokyo_88_provider.connected_3",
+      "offsetMs": 560,
+      "runId": "run_travel_tokyo_88",
+      "type": "provider.connected",
+      "message": "✓ OpenAI connected",
+      "terminalKind": "success",
+      "payload": {
+        "provider": "openai",
+        "model": "gpt-5"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_runner.creating_4",
+      "offsetMs": 720,
+      "runId": "run_travel_tokyo_88",
+      "type": "runner.creating",
+      "message": "→ Creating runner...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_travel_tokyo_88_agent.calling_5",
+      "offsetMs": 880,
+      "runId": "run_travel_tokyo_88",
+      "type": "agent.calling",
+      "message": "→ Calling travel agent...",
+      "terminalKind": "event",
+      "payload": {
+        "agentName": "Travel Concierge"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_provider.call.started_6",
+      "offsetMs": 1040,
+      "runId": "run_travel_tokyo_88",
+      "type": "provider.call.started",
+      "message": "→ Provider call gpt-5",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "spanId": "provider:0"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_provider.call.completed_7",
+      "offsetMs": 1560,
+      "runId": "run_travel_tokyo_88",
+      "type": "provider.call.completed",
+      "message": "✓ Provider responded (520ms)",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 520,
+        "finishReason": "tool_calls",
+        "inputTokens": 640,
+        "latencyMs": 520,
+        "outputTokens": 110,
+        "spanId": "provider:0",
+        "totalTokens": 750
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_tool.started_8",
+      "offsetMs": 1700,
+      "runId": "run_travel_tokyo_88",
+      "type": "tool.started",
+      "message": "→ Tool weather.lookup()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "city": "Tokyo",
+          "dates": "2026-10-20/2026-10-24"
+        },
+        "spanId": "tool:weather.lookup",
+        "toolName": "weather.lookup"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_tool.completed_9",
+      "offsetMs": 2080,
+      "runId": "run_travel_tokyo_88",
+      "type": "tool.completed",
+      "message": "✓ rain expected day 2",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 380,
+        "result": {
+          "condition": "rain",
+          "risk": "medium"
+        },
+        "spanId": "tool:weather.lookup",
+        "status": "completed",
+        "toolName": "weather.lookup"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_tool.started_10",
+      "offsetMs": 2220,
+      "runId": "run_travel_tokyo_88",
+      "type": "tool.started",
+      "message": "→ Tool flights.search()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "destination": "NRT",
+          "origin": "SFO"
+        },
+        "spanId": "tool:flights.search",
+        "toolName": "flights.search"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_tool.completed_11",
+      "offsetMs": 2740,
+      "runId": "run_travel_tokyo_88",
+      "type": "tool.completed",
+      "message": "✓ 3 itineraries found",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 520,
+        "result": {
+          "options": 3
+        },
+        "spanId": "tool:flights.search",
+        "status": "completed",
+        "toolName": "flights.search"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_handoff.started_12",
+      "offsetMs": 2900,
+      "runId": "run_travel_tokyo_88",
+      "type": "handoff.started",
+      "message": "→ Handoff → lodging",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Lodging Agent",
+        "reason": "Shortlist hotels near Asakusa.",
+        "sourceAgent": "Travel Concierge",
+        "spanId": "handoff:Travel Concierge:Lodging Agent"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_tool.started_13",
+      "offsetMs": 3120,
+      "runId": "run_travel_tokyo_88",
+      "type": "tool.started",
+      "message": "→ Tool hotels.search()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "area": "Asakusa",
+          "nights": 4
+        },
+        "spanId": "tool:hotels.search",
+        "toolName": "hotels.search"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_tool.completed_14",
+      "offsetMs": 3580,
+      "runId": "run_travel_tokyo_88",
+      "type": "tool.completed",
+      "message": "✓ 5 hotels shortlisted",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 460,
+        "result": {
+          "count": 5
+        },
+        "spanId": "tool:hotels.search",
+        "status": "completed",
+        "toolName": "hotels.search"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_handoff.completed_15",
+      "offsetMs": 3720,
+      "runId": "run_travel_tokyo_88",
+      "type": "handoff.completed",
+      "message": "✓ Handoff complete",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Lodging Agent",
+        "durationMs": 820,
+        "reason": "Shortlist hotels near Asakusa.",
+        "sourceAgent": "Travel Concierge",
+        "spanId": "handoff:Travel Concierge:Lodging Agent"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_memory.stored_16",
+      "offsetMs": 3880,
+      "runId": "run_travel_tokyo_88",
+      "type": "memory.stored",
+      "message": "→ Memory store itinerary draft",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "stored",
+        "recordCount": 4,
+        "sessionId": "session_travel_tokyo"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_provider.call.started_17",
+      "offsetMs": 4040,
+      "runId": "run_travel_tokyo_88",
+      "type": "provider.call.started",
+      "message": "→ Provider call gpt-5",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "spanId": "provider:1"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_provider.call.completed_18",
+      "offsetMs": 4620,
+      "runId": "run_travel_tokyo_88",
+      "type": "provider.call.completed",
+      "message": "✓ Itinerary drafted",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 580,
+        "estimatedCost": 0.031,
+        "finishReason": "completed",
+        "inputTokens": 1400,
+        "latencyMs": 580,
+        "outputTokens": 520,
+        "spanId": "provider:1",
+        "totalTokens": 1920
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_response.completed_19",
+      "offsetMs": 4780,
+      "runId": "run_travel_tokyo_88",
+      "type": "response.completed",
+      "message": "Assistant response",
+      "terminalKind": "markdown",
+      "payload": {
+        "finalOutput": "# Tokyo itinerary (4 days)\n\nCrafted for **late October** with rain-aware indoor backups.\n\n## Day plan\n\n| Day | Morning | Afternoon | Evening |\n| --- | --- | --- | --- |\n| 1 | Senso-ji | TeamLab Planets | Izakaya in Asakusa |\n| 2 | Meiji Shrine | Harajuku walk | Shibuya skyline |\n| 3 | teamLab Borderless | Shimokitazawa | Jazz bar |\n| 4 | Tsukiji outer | Ginza boutiques | Departure buffer |\n\n### Weather note\n\n> Expect light rain on day 2 — prefer covered malls and museums.\n\n```json\n{ \"city\": \"Tokyo\", \"condition\": \"rain\", \"risk\": \"medium\" }\n```\n\n- [x] Flights checked\n- [x] Weather retrieved\n- [x] Hotels shortlisted\n",
+        "markdown": "# Tokyo itinerary (4 days)\n\nCrafted for **late October** with rain-aware indoor backups.\n\n## Day plan\n\n| Day | Morning | Afternoon | Evening |\n| --- | --- | --- | --- |\n| 1 | Senso-ji | TeamLab Planets | Izakaya in Asakusa |\n| 2 | Meiji Shrine | Harajuku walk | Shibuya skyline |\n| 3 | teamLab Borderless | Shimokitazawa | Jazz bar |\n| 4 | Tsukiji outer | Ginza boutiques | Departure buffer |\n\n### Weather note\n\n> Expect light rain on day 2 — prefer covered malls and museums.\n\n```json\n{ \"city\": \"Tokyo\", \"condition\": \"rain\", \"risk\": \"medium\" }\n```\n\n- [x] Flights checked\n- [x] Weather retrieved\n- [x] Hotels shortlisted\n"
+      }
+    },
+    {
+      "id": "run_travel_tokyo_88_run.completed_20",
+      "offsetMs": 4920,
+      "runId": "run_travel_tokyo_88",
+      "type": "run.completed",
+      "message": "✓ Run completed (3.1s)",
+      "terminalKind": "success",
+      "payload": {
+        "estimatedCost": 0.031,
+        "finalOutput": "# Tokyo itinerary (4 days)\n\nCrafted for **late October** with rain-aware indoor backups.\n\n## Day plan\n\n| Day | Morning | Afternoon | Evening |\n| --- | --- | --- | --- |\n| 1 | Senso-ji | TeamLab Planets | Izakaya in Asakusa |\n| 2 | Meiji Shrine | Harajuku walk | Shibuya skyline |\n| 3 | teamLab Borderless | Shimokitazawa | Jazz bar |\n| 4 | Tsukiji outer | Ginza boutiques | Departure buffer |\n\n### Weather note\n\n> Expect light rain on day 2 — prefer covered malls and museums.\n\n```json\n{ \"city\": \"Tokyo\", \"condition\": \"rain\", \"risk\": \"medium\" }\n```\n\n- [x] Flights checked\n- [x] Weather retrieved\n- [x] Hotels shortlisted\n",
+        "finalStatus": "completed",
+        "markdown": "# Tokyo itinerary (4 days)\n\nCrafted for **late October** with rain-aware indoor backups.\n\n## Day plan\n\n| Day | Morning | Afternoon | Evening |\n| --- | --- | --- | --- |\n| 1 | Senso-ji | TeamLab Planets | Izakaya in Asakusa |\n| 2 | Meiji Shrine | Harajuku walk | Shibuya skyline |\n| 3 | teamLab Borderless | Shimokitazawa | Jazz bar |\n| 4 | Tsukiji outer | Ginza boutiques | Departure buffer |\n\n### Weather note\n\n> Expect light rain on day 2 — prefer covered malls and museums.\n\n```json\n{ \"city\": \"Tokyo\", \"condition\": \"rain\", \"risk\": \"medium\" }\n```\n\n- [x] Flights checked\n- [x] Weather retrieved\n- [x] Hotels shortlisted\n",
+        "totalTokens": 2670
+      }
+    }
+  ],
+  "id": "travel-agent",
+  "model": "gpt-5",
+  "provider": "openai",
+  "sessionId": "session_travel_tokyo",
+  "title": "Travel Agent"
+}

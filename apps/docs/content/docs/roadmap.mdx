@@ -1,42 +1,47 @@
 ---
 title: Roadmap
-description: Planned runtime, Studio, provider, and observability work.
+description: Planned work organized around making runs easier to control and inspect.
 ---
 
 # Roadmap
 
-The roadmap is organized around runtime clarity. New features should make runs easier to
-control, inspect, and reproduce.
+New work should make runs easier to **control**, **inspect**, and **reproduce** — not hide
+execution behind magic.
 
 ## Runtime
 
-- stronger retry policy primitives
-- first-class timeout configuration
-- richer approval adapters
-- more output repair controls
+- Richer retry policy primitives with safe defaults for reads vs writes
+- First-class timeout configuration at provider and tool edges
+- Broader approval adapters (remote reviewers, queues)
+- Clearer output repair controls after validation failure
 
 ## Studio
 
-- trace comparison
-- saved run views
-- approval audit history
-- memory diffing
-- tool latency breakdowns
+- Trace comparison across runs
+- Saved views / filters for operators
+- Approval audit history
+- Memory diffs between turns
+- Tool latency breakdowns tied to the timeline
 
 ## Providers
 
-- more provider adapters
-- provider capability metadata
-- normalized usage reporting
+- Additional vendor adapters
+- Capability metadata (tools, vision, structured output) for routing
+- Normalized usage reporting across adapters
 
 ## Observability
 
 - OpenTelemetry exporter
-- JSON trace snapshots
-- external trace sinks
-- run-level metrics
+- Stable JSON trace snapshots for CI fixtures
+- External sinks without forking core
 
 ## Principles
 
-Shiro should avoid features that hide execution. The runtime should expose enough structure for
-developers to understand why a run behaved the way it did.
+Prefer features that expose structure over features that conceal it. If a change cannot be
+explained in a [trace](/docs/tracing) or shown in [Studio](/docs/studio), revisit the design.
+
+## Related
+
+- [Architecture](/docs/architecture)
+- [Contributing](/docs/contributing)
+- [Studio](/docs/studio)

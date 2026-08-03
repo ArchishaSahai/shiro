@@ -1,48 +1,90 @@
 ---
 title: Multi-Agent
-description: Use handoffs when responsibility moves from one agent to another.
+description: Handoffs transfer responsibility inside one run — not a second chatbot.
 ---
 
 # Multi-Agent
 
-Multi-agent execution in Shiro is built on handoffs. A handoff transfers control to another
-agent while the same runner continues the run.
+Multi-agent work in Shiro is built on **handoffs**: control moves to another registered agent
+while the same [runner](/docs/runner) continues the run. You are not starting a disconnected
+second chat — you are changing who is responsible mid-execution.
 
 ## Why handoffs exist
 
-Different domains often need different tools and rules. A support agent should not have direct
-access to billing mutation tools unless it is also responsible for billing decisions.
+Different domains need different tools and policies. A support agent that can also delete
+accounts or issue refunds is a footgun. A billing agent with refund tools and approval gates is
+clearer — and the handoff shows up in traces and [Studio](/docs/studio)’s graph.
 
-## Example
+```txt
+Support Triage
+    │  handoff (invoice domain)
+    ▼
+Billing Agent  ──► lookupInvoice / issueRefund (+ approval)
+```
+
+## How it fits the runtime
+
+1. Define specialist [agents](/docs/agents)
+2. `engine.registerAgent(...)` so they can be resolved
+3. Attach a `handoff` strategy on the source agent (see `HandoffStrategy` in core)
+4. Execute once — the runner records handoff events
 
 ```ts
+engine.registerAgent(billing);
+engine.registerAgent(research);
+
 const support = new Agent({
   name: "support",
-  handoffs: [billing, research],
+  instructions: "Triage issues. Hand off billing questions.",
+  provider: "openai",
+  tools: [classifyIssue],
+  handoff: myHandoffStrategy, // HandoffStrategy
 });
 ```
 
-## When to use handoffs
+Implement `HandoffStrategy.evaluate` to return `HandoffDecisionStatus.Handoff` with a
+`targetAgent` name, or `Continue` to stay on the current agent.
 
-Use a handoff when the active agent no longer has the right responsibility, tools, or approval
-policy.
+## When to hand off
 
-Good examples:
+| Use a handoff                         | Do not                                                        |
+| ------------------------------------- | ------------------------------------------------------------- |
+| Tools / approval policy change        | Prompt is slightly long                                       |
+| Domain ownership changes              | You want a second opinion in parallel (model that explicitly) |
+| Specialist needs narrower permissions | Cosmetic “agent personas” with the same tools                 |
 
-- support to billing
-- triage to research
-- planning to deployment
-- incident intake to remediation
+## Depth limits
+
+Unbounded handoff loops are a real failure mode. The engine owns a handoff depth limiter so a
+misconfigured strategy cannot recurse forever. Design acyclic happy paths; if you need cycles,
+document why.
+
+## Observability
+
+Handoffs emit events and appear as:
+
+- Terminal lines (`→ Handoff → billing`)
+- Graph edges between agents
+- Trace events you can export
+
+See [Studio](/docs/studio) and [Tracing](/docs/tracing).
 
 ## Best practices
 
-- Keep handoff targets explicit.
-- Trace every handoff.
-- Give specialist agents narrower tools.
-- Avoid circular handoff paths unless you can explain why.
+- Register every handoff target on the engine
+- Give specialists fewer tools, not more
+- Put approval on the specialist’s mutating tools
+- Keep reasons in the handoff decision for operators
 
 ## Common mistakes
 
-- Creating many agents for prompt organization only.
-- Giving every agent every tool.
-- Implementing handoffs outside the runner.
+- Calling `engine.execute(specialist)` manually and calling it a handoff
+- Sharing one mega-tool-list across all agents
+- Circular handoffs without a depth policy
+- Hiding the transfer outside the runner (Studio will not see it)
+
+## Related
+
+- [Agents](/docs/agents)
+- [Engine](/docs/engine) `registerAgent`
+- [Examples](/docs/examples) — support → billing, research workflows

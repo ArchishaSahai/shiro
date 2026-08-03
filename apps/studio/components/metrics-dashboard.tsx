@@ -31,39 +31,38 @@ export function MetricsDashboard({ trace }: { readonly trace: StudioRunTrace }) 
     { name: "Total", value: trace.totalDurationMs ?? 0 },
   ];
 
+  const tokenCount = totalTokens(trace);
+
   return (
     <Card>
       <CardHeader>
         <SectionHeading
-          description="Tracks latency, tokens, cost, and orchestration volume for the selected run. Use it to spot slow stages and expensive calls."
+          description="Tracks latency, tokens, cost, and orchestration volume for the selected run."
           icon={Gauge}
         >
           Metrics Dashboard
         </SectionHeading>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <MetricCard
-            accent="blue"
             icon={Layers3}
             label="Tokens"
-            numericValue={totalTokens(trace)}
+            numericValue={tokenCount}
             trend="usage"
-            value={String(totalTokens(trace) ?? "-")}
+            value={tokenCount === undefined ? "—" : String(tokenCount)}
           />
           <MetricCard
-            accent="green"
             icon={Gauge}
             label="Cost"
             trend="estimate"
             value={
               trace.tokenUsage?.estimatedCost === undefined
-                ? "-"
+                ? "—"
                 : `$${String(trace.tokenUsage.estimatedCost)}`
             }
           />
           <MetricCard
-            accent="amber"
             icon={Timer}
             label="Latency"
             trend="total"
@@ -76,7 +75,6 @@ export function MetricsDashboard({ trace }: { readonly trace: StudioRunTrace }) 
             value={formatDuration(providerLatency(trace))}
           />
           <MetricCard
-            accent="green"
             icon={Workflow}
             label="Tools"
             trend={`${String(trace.toolExecutions.length)} calls`}
@@ -101,43 +99,39 @@ export function MetricsDashboard({ trace }: { readonly trace: StudioRunTrace }) 
                 />
                 <XAxis
                   axisLine={false}
+                  className="font-mono"
                   dataKey="name"
                   fontSize={10}
                   stroke="rgba(255, 255, 255, 0.4)"
                   tickLine={false}
-                  className="font-mono"
                 />
                 <YAxis
                   axisLine={false}
+                  className="font-mono"
                   fontSize={10}
                   stroke="rgba(255, 255, 255, 0.4)"
                   tickLine={false}
                   width={42}
-                  className="font-mono"
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: "#09090b",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    borderRadius: 12,
-                    color: "#ffffff",
-                    boxShadow: "0 16px 42px rgba(0, 0, 0, 0.5)",
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: "12px",
-                  }}
+                  contentStyle={tooltipStyle}
+                  cursor={false}
                   itemStyle={{ color: "#ffffff" }}
-                  labelStyle={{ color: "rgba(255, 255, 255, 0.5)", fontWeight: 500 }}
                 />
                 <Legend
                   iconType="circle"
-                  wrapperStyle={{ fontSize: "11px", fontFamily: "Inter, sans-serif" }}
+                  wrapperStyle={{ fontSize: "11px", fontFamily: "IBM Plex Mono, monospace" }}
                 />
                 <Bar
+                  activeBar={{
+                    fill: "#ff4fd8",
+                    style: { filter: "drop-shadow(0 0 12px rgba(255, 79, 216, 0.45))" },
+                  }}
                   dataKey="value"
                   fill="#ffffff"
+                  maxBarSize={48}
                   name="Duration ms"
                   radius={[6, 6, 0, 0]}
-                  maxBarSize={48}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -157,41 +151,29 @@ export function MetricsDashboard({ trace }: { readonly trace: StudioRunTrace }) 
                 />
                 <XAxis
                   axisLine={false}
+                  className="font-mono"
                   dataKey="name"
                   fontSize={10}
                   stroke="rgba(255, 255, 255, 0.4)"
                   tickLine={false}
-                  className="font-mono"
                 />
                 <YAxis
                   axisLine={false}
+                  className="font-mono"
                   fontSize={10}
                   stroke="rgba(255, 255, 255, 0.4)"
                   tickLine={false}
                   width={42}
-                  className="font-mono"
                 />
-                <Tooltip
-                  contentStyle={{
-                    background: "#09090b",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    borderRadius: 12,
-                    color: "#ffffff",
-                    boxShadow: "0 16px 42px rgba(0, 0, 0, 0.5)",
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: "12px",
-                  }}
-                  itemStyle={{ color: "#ffffff" }}
-                  labelStyle={{ color: "rgba(255, 255, 255, 0.5)", fontWeight: 500 }}
-                />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: "#ffffff" }} />
                 <Legend
                   iconType="circle"
-                  wrapperStyle={{ fontSize: "11px", fontFamily: "Inter, sans-serif" }}
+                  wrapperStyle={{ fontSize: "11px", fontFamily: "IBM Plex Mono, monospace" }}
                 />
                 <Line
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                   dataKey="value"
                   dot={{ fill: "#ff4fd8", r: 3 }}
-                  activeDot={{ r: 5, strokeWidth: 0 }}
                   name="Provider ms"
                   stroke="#ff4fd8"
                   strokeWidth={1.8}
@@ -205,3 +187,13 @@ export function MetricsDashboard({ trace }: { readonly trace: StudioRunTrace }) 
     </Card>
   );
 }
+
+const tooltipStyle = {
+  background: "#09090b",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  borderRadius: 12,
+  boxShadow: "0 16px 42px rgba(0, 0, 0, 0.5)",
+  color: "#ffffff",
+  fontFamily: "IBM Plex Mono, monospace",
+  fontSize: "12px",
+};

@@ -1,62 +1,222 @@
 ---
 title: Examples
-description: Small implementation patterns for common Shiro workflows.
+description: Realistic workflow patterns — support, refunds, research, approvals, structured weather.
 ---
 
 # Examples
 
-Use these examples as starting points. Each one shows a runtime behavior, not a full
-application.
+Each example is a **pattern**, not a toy snippet. Copy the shape, then replace the adapters
+(`invoices`, `refunds`, …) with your systems.
 
-## Tool call
+Shared setup for all examples:
+
+```ts
+import { Agent, Engine, TraceManager, tool } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
+import { z } from "zod";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
+```
+
+---
+
+## Customer support + invoice lookup
+
+**Why:** Support agents guess invoice state when they lack a tool. A typed lookup keeps numbers
+honest and shows up in [Studio](/docs/studio)’s tool inspector.
+
+**When:** Read-only account questions before any mutation.
 
 ```ts
 const lookupInvoice = tool({
   name: "lookupInvoice",
-  execute: async ({ invoiceId }: { invoiceId: string }) => invoices.get(invoiceId),
+  description: "Fetch invoice status and amount.",
+  parameters: z.object({ invoiceId: z.string() }),
+  execute: async ({ invoiceId }) => invoices.get(invoiceId),
+});
+
+const support = new Agent({
+  name: "support",
+  instructions: "Resolve billing questions. Call lookupInvoice before stating balances.",
+  provider: "openai",
+  tools: [lookupInvoice],
+});
+
+await engine.execute(support, "What is the status of INV-8821?", {
+  sessionId: "customer_48",
 });
 ```
 
-Use this pattern for read-only lookups that the model can request during a run.
+**How it works:** The runner lets the model request `lookupInvoice`, validates args, executes,
+and continues. Session id keeps follow-ups continuous — see [Memory & Sessions](/docs/memory-sessions).
 
-## Approval gate
+---
+
+## Refund with approval
+
+**Why:** Refunds move money. Natural-language “confirmation” is not a control. Mark the tool
+`requiresApproval: true` so the [runner](/docs/runner) pauses and [Studio](/docs/studio) can show
+the gate.
+
+**When:** Any mutating payment / credit path.
 
 ```ts
 const issueRefund = tool({
   name: "issueRefund",
+  description: "Issue a refund for an order.",
   requiresApproval: true,
-  execute: refunds.issue,
+  approvalDescription: "Credits the customer payment method.",
+  parameters: z.object({
+    orderId: z.string(),
+    amount: z.number().positive(),
+  }),
+  execute: async (input) => refunds.issue(input),
+});
+
+const refundAgent = new Agent({
+  name: "refund",
+  instructions: "Verify the order, then issue a refund only via issueRefund.",
+  provider: "openai",
+  tools: [lookupOrder, checkRefundPolicy, issueRefund],
 });
 ```
 
-Use this pattern for external mutations that need review.
+See [Human-in-the-loop](/docs/human-in-the-loop). Make `issueRefund` idempotent before retries.
 
-## Handoff
+---
+
+## Scheduling / travel planning
+
+**Why:** Multi-step plans need several tools (weather, flights, hotels). One agent with narrow
+tools is clearer than one mega-prompt.
+
+**When:** Itineraries, booking assistance, constraint-heavy planning.
 
 ```ts
-const support = new Agent({
-  name: "support",
-  handoffs: [billing],
+const travel = new Agent({
+  name: "travel",
+  instructions: "Build a practical itinerary. Prefer tools over inventing schedules.",
+  provider: "openai",
+  tools: [weatherLookup, flightsSearch, hotelsSearch],
+});
+
+await engine.execute(travel, "4 days in Tokyo in late October, rain-aware.");
+```
+
+Inspect tool order and latency in Studio’s timeline.
+
+---
+
+## Research workflow
+
+**Why:** Research benefits from retrieval + compaction + a specialist handoff. Dumping the web
+into the prompt does not scale.
+
+**When:** Competitive briefs, incident writeups, multi-source summaries.
+
+```ts
+engine.registerAgent(marketAnalyst);
+
+const researchLead = new Agent({
+  name: "research-lead",
+  instructions: "Gather sources, then hand off synthesis when evidence is ready.",
+  provider: "openai",
+  tools: [webResearch],
+  handoff: researchHandoffStrategy,
 });
 ```
 
-Use this pattern when responsibility moves to another domain.
+Pair with [Multi-Agent](/docs/multi-agent) and memory compaction events in traces.
 
-## Trace export
+---
 
-```ts
-const result = await engine.execute(agent, input);
-await result.trace.export({ destination: "studio" });
-```
+## Approval before deleting resources
 
-Use this pattern before debugging complex behavior.
-
-## Session
+**Why:** Deletes are irreversible. Gate them explicitly.
 
 ```ts
-await engine.execute(agent, input, {
-  sessionId: "customer_123",
+const deleteResource = tool({
+  name: "deleteResource",
+  requiresApproval: true,
+  approvalDescription: "Irreversible delete.",
+  parameters: z.object({ resourceId: z.string() }),
+  execute: async ({ resourceId }) => cloud.delete(resourceId),
 });
 ```
 
-Use this pattern for multi-turn conversations and durable context.
+Operators review args in the approval center before `execute` runs.
+
+---
+
+## Structured weather output
+
+**Why:** Downstream code needs fields, not a paragraph. Attach `output` on the agent.
+
+**When:** Any result another system will parse.
+
+```ts
+const weatherOutput = z.object({
+  city: z.string(),
+  condition: z.string(),
+  temperature: z.number(),
+});
+
+const weatherAgent = new Agent({
+  name: "weather",
+  instructions: "Return structured weather only.",
+  provider: "openai",
+  output: weatherOutput,
+});
+
+const result = await engine.execute(weatherAgent, "Sample weather for Pune: 24C, cloudy.");
+
+console.log(result.output.temperature);
+```
+
+See [Structured Outputs](/docs/structured-outputs) and `examples/basic-agent` in the repo.
+
+---
+
+## Multi-agent delegation (support → billing)
+
+**Why:** Billing mutations should not live on the triage agent.
+
+```ts
+engine.registerAgent(billingAgent);
+
+const triage = new Agent({
+  name: "support-triage",
+  instructions: "Classify issues. Hand off billing.",
+  provider: "openai",
+  tools: [classifyIssue],
+  handoff: toBillingWhenNeeded,
+});
+```
+
+Watch the handoff on Studio’s execution graph.
+
+---
+
+## Exporting for Studio
+
+```ts
+import { JsonTraceExporter } from "@shiro/core";
+
+const json = await traces.export(new JsonTraceExporter());
+// Load / replay in Studio, or attach to an issue
+```
+
+See [Tracing](/docs/tracing) and [Studio](/docs/studio).
+
+## Related
+
+- [Quick Start](/docs/quick-start)
+- [Tools](/docs/tools)
+- [CLI](/docs/cli)

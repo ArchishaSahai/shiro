@@ -1,0 +1,337 @@
+{
+  "aliases": ["refund-agent", "examples/refund", "traces/customer-refund", "traces/refund"],
+  "agentName": "Refund Agent",
+  "command": "shiro run refund-agent",
+  "description": "Validate refund eligibility, request approval, and issue a refund.",
+  "events": [
+    {
+      "id": "run_refund_c441_run.started_0",
+      "offsetMs": 0,
+      "runId": "run_refund_c441",
+      "type": "run.started",
+      "message": "$ shiro replay traces/customer-refund",
+      "terminalKind": "command"
+    },
+    {
+      "id": "run_refund_c441_engine.started_1",
+      "offsetMs": 160,
+      "runId": "run_refund_c441",
+      "type": "engine.started",
+      "message": "✓ Engine started",
+      "terminalKind": "success",
+      "payload": {
+        "agentName": "Refund Agent",
+        "model": "claude-4.1-sonnet",
+        "provider": "anthropic",
+        "sessionId": "session_refund_441"
+      }
+    },
+    {
+      "id": "run_refund_c441_provider.loading_2",
+      "offsetMs": 380,
+      "runId": "run_refund_c441",
+      "type": "provider.loading",
+      "message": "→ Loading providers...",
+      "terminalKind": "event",
+      "payload": {
+        "provider": "anthropic"
+      }
+    },
+    {
+      "id": "run_refund_c441_provider.connected_3",
+      "offsetMs": 640,
+      "runId": "run_refund_c441",
+      "type": "provider.connected",
+      "message": "✓ Anthropic connected",
+      "terminalKind": "success",
+      "payload": {
+        "model": "claude-4.1-sonnet",
+        "provider": "anthropic"
+      }
+    },
+    {
+      "id": "run_refund_c441_runner.creating_4",
+      "offsetMs": 820,
+      "runId": "run_refund_c441",
+      "type": "runner.creating",
+      "message": "→ Creating runner...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_refund_c441_agent.calling_5",
+      "offsetMs": 980,
+      "runId": "run_refund_c441",
+      "type": "agent.calling",
+      "message": "→ Calling refund agent...",
+      "terminalKind": "event",
+      "payload": {
+        "agentName": "Refund Agent"
+      }
+    },
+    {
+      "id": "run_refund_c441_provider.call.started_6",
+      "offsetMs": 1120,
+      "runId": "run_refund_c441",
+      "type": "provider.call.started",
+      "message": "→ Provider call claude-4.1-sonnet",
+      "terminalKind": "event",
+      "payload": {
+        "model": "claude-4.1-sonnet",
+        "provider": "anthropic",
+        "spanId": "provider:0"
+      }
+    },
+    {
+      "id": "run_refund_c441_provider.call.completed_7",
+      "offsetMs": 1680,
+      "runId": "run_refund_c441",
+      "type": "provider.call.completed",
+      "message": "✓ Provider responded (560ms)",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 560,
+        "finishReason": "tool_calls",
+        "inputTokens": 720,
+        "latencyMs": 560,
+        "outputTokens": 90,
+        "spanId": "provider:0",
+        "totalTokens": 810
+      }
+    },
+    {
+      "id": "run_refund_c441_tool.started_8",
+      "offsetMs": 1820,
+      "runId": "run_refund_c441",
+      "type": "tool.started",
+      "message": "→ Tool lookupOrder()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "orderId": "ord_7741"
+        },
+        "spanId": "tool:lookupOrder",
+        "toolName": "lookupOrder"
+      }
+    },
+    {
+      "id": "run_refund_c441_tool.completed_9",
+      "offsetMs": 2140,
+      "runId": "run_refund_c441",
+      "type": "tool.completed",
+      "message": "✓ order found",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 320,
+        "result": {
+          "ageDays": 11,
+          "amount": 64,
+          "status": "delivered"
+        },
+        "spanId": "tool:lookupOrder",
+        "status": "completed",
+        "toolName": "lookupOrder"
+      }
+    },
+    {
+      "id": "run_refund_c441_tool.started_10",
+      "offsetMs": 2280,
+      "runId": "run_refund_c441",
+      "type": "tool.started",
+      "message": "→ Tool checkRefundPolicy()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "ageDays": 11
+        },
+        "spanId": "tool:checkRefundPolicy",
+        "toolName": "checkRefundPolicy"
+      }
+    },
+    {
+      "id": "run_refund_c441_tool.completed_11",
+      "offsetMs": 2520,
+      "runId": "run_refund_c441",
+      "type": "tool.completed",
+      "message": "✓ within 14-day window",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 240,
+        "result": {
+          "allowed": true,
+          "windowDays": 14
+        },
+        "spanId": "tool:checkRefundPolicy",
+        "status": "completed",
+        "toolName": "checkRefundPolicy"
+      }
+    },
+    {
+      "id": "run_refund_c441_approval.requested_12",
+      "offsetMs": 2680,
+      "runId": "run_refund_c441",
+      "type": "approval.requested",
+      "message": "→ Approval requested for issueRefund",
+      "terminalKind": "warning",
+      "payload": {
+        "policy": "destructive-action",
+        "spanId": "approval:issueRefund",
+        "toolName": "issueRefund"
+      }
+    },
+    {
+      "id": "run_refund_c441_approval.granted_13",
+      "offsetMs": 3180,
+      "runId": "run_refund_c441",
+      "type": "approval.granted",
+      "message": "✓ Approved by Nora Patel",
+      "terminalKind": "success",
+      "payload": {
+        "approver": "Nora Patel",
+        "decision": "approval.granted",
+        "durationMs": 500,
+        "policy": "destructive-action",
+        "spanId": "approval:issueRefund",
+        "toolName": "issueRefund"
+      }
+    },
+    {
+      "id": "run_refund_c441_tool.started_14",
+      "offsetMs": 3320,
+      "runId": "run_refund_c441",
+      "type": "tool.started",
+      "message": "→ Tool issueRefund()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "amount": 64,
+          "orderId": "ord_7741"
+        },
+        "spanId": "tool:issueRefund",
+        "toolName": "issueRefund"
+      }
+    },
+    {
+      "id": "run_refund_c441_tool.completed_15",
+      "offsetMs": 3760,
+      "runId": "run_refund_c441",
+      "type": "tool.completed",
+      "message": "✓ refund issued",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 440,
+        "result": {
+          "refundId": "rfnd_992",
+          "status": "succeeded"
+        },
+        "spanId": "tool:issueRefund",
+        "status": "completed",
+        "toolName": "issueRefund"
+      }
+    },
+    {
+      "id": "run_refund_c441_handoff.started_16",
+      "offsetMs": 3900,
+      "runId": "run_refund_c441",
+      "type": "handoff.started",
+      "message": "→ Handoff → support",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Support Triage",
+        "reason": "Notify customer of refund.",
+        "sourceAgent": "Refund Agent",
+        "spanId": "handoff:Refund Agent:Support Triage"
+      }
+    },
+    {
+      "id": "run_refund_c441_handoff.completed_17",
+      "offsetMs": 4120,
+      "runId": "run_refund_c441",
+      "type": "handoff.completed",
+      "message": "✓ Handoff complete",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Support Triage",
+        "durationMs": 220,
+        "reason": "Notify customer of refund.",
+        "sourceAgent": "Refund Agent",
+        "spanId": "handoff:Refund Agent:Support Triage"
+      }
+    },
+    {
+      "id": "run_refund_c441_provider.call.started_18",
+      "offsetMs": 4280,
+      "runId": "run_refund_c441",
+      "type": "provider.call.started",
+      "message": "→ Provider call claude-4.1-sonnet",
+      "terminalKind": "event",
+      "payload": {
+        "model": "claude-4.1-sonnet",
+        "provider": "anthropic",
+        "spanId": "provider:1"
+      }
+    },
+    {
+      "id": "run_refund_c441_provider.call.completed_19",
+      "offsetMs": 4780,
+      "runId": "run_refund_c441",
+      "type": "provider.call.completed",
+      "message": "✓ Response generated",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 500,
+        "estimatedCost": 0.022,
+        "finishReason": "completed",
+        "inputTokens": 980,
+        "latencyMs": 500,
+        "outputTokens": 280,
+        "spanId": "provider:1",
+        "totalTokens": 1260
+      }
+    },
+    {
+      "id": "run_refund_c441_memory.stored_20",
+      "offsetMs": 4900,
+      "runId": "run_refund_c441",
+      "type": "memory.stored",
+      "message": "→ Memory store refund decision",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "stored",
+        "recordCount": 2,
+        "sessionId": "session_refund_441"
+      }
+    },
+    {
+      "id": "run_refund_c441_response.completed_21",
+      "offsetMs": 5040,
+      "runId": "run_refund_c441",
+      "type": "response.completed",
+      "message": "Assistant response",
+      "terminalKind": "markdown",
+      "payload": {
+        "finalOutput": "# Refund decision\n\nCustomer **acct_48** requested a refund for order `ord_7741`.\n\n## Findings\n\n| Check | Result |\n| --- | --- |\n| Order age | 11 days |\n| Policy window | 14 days |\n| Chargeback risk | Low |\n\n### Decision\n\nRefund **approved** for `$64.00` after policy validation.\n\n```bash\nshiro run refund-agent --order ord_7741\n```\n\n> Human approval was required because `issueRefund` is marked destructive.\n\n- [x] Order verified\n- [x] Policy matched\n- [x] Refund issued\n",
+        "markdown": "# Refund decision\n\nCustomer **acct_48** requested a refund for order `ord_7741`.\n\n## Findings\n\n| Check | Result |\n| --- | --- |\n| Order age | 11 days |\n| Policy window | 14 days |\n| Chargeback risk | Low |\n\n### Decision\n\nRefund **approved** for `$64.00` after policy validation.\n\n```bash\nshiro run refund-agent --order ord_7741\n```\n\n> Human approval was required because `issueRefund` is marked destructive.\n\n- [x] Order verified\n- [x] Policy matched\n- [x] Refund issued\n"
+      }
+    },
+    {
+      "id": "run_refund_c441_run.completed_22",
+      "offsetMs": 5200,
+      "runId": "run_refund_c441",
+      "type": "run.completed",
+      "message": "✓ Run completed (2.8s)",
+      "terminalKind": "success",
+      "payload": {
+        "estimatedCost": 0.022,
+        "finalOutput": "# Refund decision\n\nCustomer **acct_48** requested a refund for order `ord_7741`.\n\n## Findings\n\n| Check | Result |\n| --- | --- |\n| Order age | 11 days |\n| Policy window | 14 days |\n| Chargeback risk | Low |\n\n### Decision\n\nRefund **approved** for `$64.00` after policy validation.\n\n```bash\nshiro run refund-agent --order ord_7741\n```\n\n> Human approval was required because `issueRefund` is marked destructive.\n\n- [x] Order verified\n- [x] Policy matched\n- [x] Refund issued\n",
+        "finalStatus": "completed",
+        "markdown": "# Refund decision\n\nCustomer **acct_48** requested a refund for order `ord_7741`.\n\n## Findings\n\n| Check | Result |\n| --- | --- |\n| Order age | 11 days |\n| Policy window | 14 days |\n| Chargeback risk | Low |\n\n### Decision\n\nRefund **approved** for `$64.00` after policy validation.\n\n```bash\nshiro run refund-agent --order ord_7741\n```\n\n> Human approval was required because `issueRefund` is marked destructive.\n\n- [x] Order verified\n- [x] Policy matched\n- [x] Refund issued\n",
+        "totalTokens": 2070
+      }
+    }
+  ],
+  "id": "refund",
+  "model": "claude-4.1-sonnet",
+  "provider": "anthropic",
+  "sessionId": "session_refund_441",
+  "title": "Refund Agent"
+}

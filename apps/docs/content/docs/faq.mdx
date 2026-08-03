@@ -1,38 +1,61 @@
 ---
 title: FAQ
-description: Practical answers about Shiro's runtime model, Studio, providers, tools, and traces.
+description: Short answers about the runtime model, Studio, providers, tools, and traces.
 ---
 
 # FAQ
 
-## Is Shiro a provider wrapper?
+## Is Shiro a thin wrapper around OpenAI?
 
-No. Provider adapters are one part of the runtime. Shiro also owns the run lifecycle: tools,
-handoffs, approvals, sessions, memory, output validation, and trace emission.
+No. Provider adapters are one piece. Shiro also owns the run lifecycle: [tools](/docs/tools),
+[handoffs](/docs/multi-agent), [approvals](/docs/human-in-the-loop), [sessions](/docs/memory-sessions),
+output validation, and [tracing](/docs/tracing).
 
 ## Do I need Studio?
 
-No. The runtime works without Studio. Studio is useful when you need to inspect runs, review
-approvals, compare traces, or debug tool behavior.
+No. The runtime works without it. Use [Studio](/docs/studio) when you need timelines, graphs,
+tool inspection, approval review, or trace replay while building.
 
-## Can I use my own model provider?
+## How do I register OpenAI?
 
-Yes. Implement the provider contract and register it with the engine. The rest of the runtime
-does not need to know which vendor fulfilled the request.
+```ts
+engine.use(new OpenAIPlugin({ apiKey, model: "gpt-5" }));
+```
 
-## Where should I store user state?
+Then set `provider: "openai"` on the [agent](/docs/agents). See [Providers](/docs/providers).
 
-Use sessions and memory. Do not mutate agent definitions with user-specific state.
+## Where should user state live?
+
+In [sessions / memory](/docs/memory-sessions), keyed by `sessionId` on `execute`. Do not mutate
+agent definitions per user.
+
+## Why is my tool missing from Studio?
+
+The [runner](/docs/runner) never executed it. Calling the underlying function from application
+code bypasses traces. Define a `tool()` and put it on the agent.
 
 ## Are tool calls retried automatically?
 
-Only when configured and safe. Mutating tools should use idempotency before retries are enabled.
-
-## How do I debug a bad answer?
-
-Start with the trace. Check the provider input, tool arguments, memory reads, handoffs, approval
-decisions, and output validation attempts in order.
+Only when you configure safe retry behavior. Mutating tools need idempotency first — see
+[Reliability](/docs/reliability).
 
 ## Is approval rejection an error?
 
-Not necessarily. Rejection is a normal runtime outcome for tools that require review.
+Often it is a normal product outcome. Map `ApprovalRejectedError` (or equivalent) to a user-
+visible “not approved” path instead of a generic 500. See [Error Handling](/docs/error-handling).
+
+## How do I debug a bad answer?
+
+Open the [trace](/docs/tracing) (or Studio) and check, in order: provider input → tool args →
+tool result → handoff → approval → memory → output validation.
+
+## Does `engine.stream()` exist?
+
+High-level run streaming is modeled as **runtime events** on the event bus / `TraceManager`.
+Providers may expose token `stream()` separately. See [Streaming](/docs/streaming).
+
+## Related
+
+- [Mental Model](/docs/core-concepts)
+- [Quick Start](/docs/quick-start)
+- [CLI](/docs/cli)

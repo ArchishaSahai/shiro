@@ -1,82 +1,124 @@
 ---
 title: Quick Start
-description: Create an engine, define an agent, add a tool, and inspect the run.
+description: Engine, plugin, tool, agent, execute — and what the runner does with them.
 ---
 
 # Quick Start
 
-This guide creates one agent with one tool. The goal is not to build a full application; it is
-to see how Shiro moves execution through the runtime.
+This walkthrough creates one agent with one tool. The goal is to see how Shiro moves a run
+through the runtime — not to ship a full product.
 
-## 1. Create an engine
+## 1. Engine + provider plugin
 
-The engine owns shared runtime services. Create it once and reuse it.
+The [engine](/docs/engine) owns shared services. Providers are installed as [plugins](/docs/plugins).
 
 ```ts
-import { Engine } from "@shiro/core";
-import { openai } from "@shiro/openai";
+import { Engine, TraceManager } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
 
-const engine = new Engine({
-  providers: [openai({ model: "gpt-5" })],
-});
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
 ```
 
 ## 2. Define a tool
 
-Tools are typed side effects. They run inside the Shiro lifecycle, so they can be traced,
-timed out, approved, or retried.
+[Tools](/docs/tools) need a name, a schema with `.parse()`, and `execute`. The model may request
+the tool; the [runner](/docs/runner) executes it.
 
 ```ts
 import { tool } from "@shiro/core";
+import { z } from "zod";
 
 const weather = tool({
   name: "weather",
   description: "Look up current weather for a city.",
-  execute: async ({ city }: { city: string }) => {
-    return { city, summary: "Clear", temperatureC: 27 };
-  },
+  parameters: z.object({
+    city: z.string(),
+  }),
+  execute: async ({ city }) => ({
+    city,
+    summary: "Clear",
+    temperatureC: 27,
+  }),
 });
 ```
 
 ## 3. Define an agent
 
-Agents describe behavior. Avoid storing user state on the agent itself.
+[Agents](/docs/agents) are declarative. Always set `provider` to a registered provider id or
+instance.
 
 ```ts
 import { Agent } from "@shiro/core";
 
 const agent = new Agent({
   name: "support",
-  instructions: "Help users with concise, factual answers.",
+  instructions: "Answer briefly. Use the weather tool when the user asks about conditions.",
+  provider: "openai",
   tools: [weather],
 });
 ```
 
-## 4. Execute a run
+## 4. Execute
 
 ```ts
-const result = await engine.execute(agent, "Should I bring an umbrella in Pune?");
+const result = await engine.execute(agent, "Should I bring an umbrella in Pune today?");
+
 console.log(result.output);
+console.log(result.runId);
 ```
 
 ## What happens
 
-- the engine creates a runner
-- the runner prepares session context
-- the provider receives the agent instructions and current messages
-- the model may request the weather tool
-- Shiro executes the tool and records a span
-- the final answer is returned with trace data
+1. The engine becomes ready and creates a runner
+2. The runner prepares context (session/memory if configured)
+3. The provider receives instructions + messages
+4. The model may request `weather` with `{ city: "Pune" }`
+5. Shiro validates arguments, executes the tool, and records the span
+6. The provider may be called again with the tool result
+7. The final output returns on `result`
+8. Events flow through `TraceManager` for export / [Studio](/docs/studio)
+
+```txt
+execute → runner → provider → tool → provider → output
+                         │
+                         └─► events / traces
+```
+
+## 5. Export a trace (optional)
+
+```ts
+import { JsonTraceExporter } from "@shiro/core";
+
+const json = await traces.export(new JsonTraceExporter());
+console.log(json);
+```
+
+Open the export in Studio, or attach it to an issue. See [Tracing](/docs/tracing).
 
 ## Best practices
 
-- Keep the engine outside request handlers.
-- Keep tools small and typed.
-- Add tracing before adding multiple agents.
-- Use sessions when a conversation spans more than one request.
+- Keep the engine outside request handlers
+- Keep tool schemas aligned with `execute` input types
+- Add tracing before you add a second agent
+- Pass `sessionId` when the conversation spans requests
 
 ## Common mistakes
 
-- Calling tools directly from application code.
-- Letting the model invent tool argument shapes.
-- Recreating the engine for every run.
+- Calling `weather.execute` yourself — the runner will not see it
+- Forgetting `parameters` on `tool()`
+- Omitting `provider` on `Agent`
+- Recreating the engine every call
+
+## Next
+
+- [Mental Model](/docs/core-concepts) — lifetimes and ownership
+- [Studio](/docs/studio) — inspect runs visually
+- [Examples](/docs/examples) — support, refunds, research, approvals

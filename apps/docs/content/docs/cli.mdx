@@ -1,46 +1,135 @@
 ---
 title: CLI
-description: Run agents, inspect traces, and launch Studio from the command line.
+description: Scaffold projects, diagnose setup, and launch Studio from the terminal.
 ---
 
 # CLI
 
-The Shiro CLI is useful for local runs, trace inspection, and launching Studio.
+The Shiro CLI helps you start a project and get into [Studio](/docs/studio) quickly. It is
+developer tooling around the SDK — not a second runtime.
 
-## Run an agent
-
-```bash
-shiro run support-agent
-```
-
-Expected output:
+Install / run via your package manager, for example:
 
 ```bash
-$ shiro run support-agent
-ok engine initialized
-ok provider connected
--> tool weather.lookup
--> handoff support -> research
-ok completed in 1.82s
+npx @shiro/cli --help
 ```
 
-## Launch Studio
+## Workflows
+
+### Start a new agent project
+
+**Goal:** Scaffold an app with provider choice and scripts instead of copying boilerplate.
 
 ```bash
-shiro studio
+shiro init my-agent
+cd my-agent
 ```
 
-Use Studio when a run needs visual inspection: timeline, graph, memory, approvals, and tool
-results.
+Useful flags:
 
-## Export traces
+| Flag                                   | Purpose                        |
+| -------------------------------------- | ------------------------------ |
+| `--provider openai\|anthropic\|gemini` | Preselect provider integration |
+| `--model <name>`                       | Default model string           |
+| `--language typescript\|javascript`    | Project language               |
+| `--package-manager pnpm\|npm\|yarn`    | Installer                      |
+| `-y, --yes`                            | Defaults, no prompts           |
+| `--no-install`                         | Skip dependency install        |
+
+After init, configure `OPENAI_API_KEY` (or the provider you chose), then run the project’s
+`dev` script.
+
+### Develop with Studio
+
+**Goal:** Validate the project, then open Studio to inspect runs.
 
 ```bash
-shiro trace export --run run_01J8 --format json
+shiro dev
+shiro dev --port 3001
 ```
+
+`dev` runs the same checks as `doctor`. If something is broken (missing dependency, missing
+key), it stops before launching Studio. On success it starts the Studio app (in the monorepo
+this filters `@shiro/studio`).
+
+### Diagnose a broken setup
+
+**Goal:** See what is wrong before you debug agent logic.
+
+```bash
+shiro doctor
+```
+
+Use this when `execute` fails for environmental reasons — missing packages, unset API keys,
+misconfigured project metadata.
+
+### Inspect project metadata
+
+```bash
+shiro info
+```
+
+Prints CLI version, project name, configured provider/model, and detected plugins. Useful in
+bug reports.
+
+### List provider integration status
+
+```bash
+shiro providers
+```
+
+Shows which provider packages are installed and whether related env keys are present. Pair with
+[Providers](/docs/providers) and [Installation](/docs/installation).
+
+### List detected plugins
+
+```bash
+shiro plugins
+```
+
+Confirms what the CLI can see from `package.json` — not a substitute for checking
+`engine.use(...)` in code.
+
+### Version
+
+```bash
+shiro version
+# or: shiro --version
+```
+
+## How this fits day-to-day
+
+```txt
+shiro init     →  create project
+     ↓
+configure env  →  OPENAI_API_KEY=...
+     ↓
+write agents   →  @shiro/core APIs
+     ↓
+shiro doctor   →  fix setup issues
+     ↓
+shiro dev      →  Studio for timelines / tools / approvals
+```
+
+Running agents in production still goes through your app calling `engine.execute`. The CLI does
+not replace that path.
 
 ## Best practices
 
-- Use the CLI to reproduce bugs outside the app.
-- Attach exported traces to issues.
-- Keep CLI examples small and deterministic.
+- Run `doctor` before filing “Studio is empty” issues
+- Keep provider env vars out of git
+- Use Studio (`dev`) while adding tools and approvals
+- Attach `info` + trace JSON to bug reports
+
+## Common mistakes
+
+- Expecting `shiro run` as a production orchestrator — define agents in code; use Studio to
+  inspect
+- Launching Studio without a registered provider plugin in the app under test
+- Ignoring `doctor` errors and debugging prompts instead
+
+## Related
+
+- [Studio](/docs/studio)
+- [Installation](/docs/installation)
+- [Quick Start](/docs/quick-start)

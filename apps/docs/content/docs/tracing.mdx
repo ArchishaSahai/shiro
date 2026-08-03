@@ -1,59 +1,80 @@
 ---
 title: Tracing
-description: Record the execution events needed to understand a Shiro run.
+description: Structured records of provider calls, tools, handoffs, approvals, and memory.
 ---
 
 # Tracing
 
-A Shiro trace is a structured record of one run. It includes provider calls, tool spans,
-handoffs, approvals, memory reads and writes, validation attempts, timing, usage, and final
-output.
+A Shiro trace is a structured record of one run: provider calls, tool spans, handoffs,
+approvals, memory operations, timing, usage, and outcomes. [Studio](/docs/studio) is a UI on
+top of that record. Logs are not a substitute.
 
 ## Why traces exist
 
-Text logs can tell you that something happened. A trace tells you where it happened in the run
-and what came before it.
+A log line says _something_ failed. A trace answers _where_ in the run:
 
-## Example
+1. Provider input
+2. Tool request + arguments
+3. Tool result / error
+4. Handoff decision
+5. Approval state
+6. Memory reads
+7. Output validation
 
-```ts
-const result = await engine.execute(agent, input);
-await result.trace.export({ destination: "studio" });
-```
+Debug in that order unless you already know the failing stage.
 
-## What to inspect first
-
-When a run fails or produces a bad answer, inspect these in order:
-
-1. provider input
-2. model tool request
-3. tool arguments
-4. tool result
-5. handoff decision
-6. approval state
-7. memory reads
-8. output validation
-
-## Exporters
-
-Trace exporters send run data to Studio, JSON files, logs, or external observability systems.
+## Wiring a TraceManager
 
 ```ts
-await trace.export({
-  destination: "json",
-  include: ["provider", "tool", "approval", "memory"],
-});
+import { ConsoleTraceExporter, Engine, JsonTraceExporter, TraceManager } from "@shiro/core";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+
+// ... plugins, agent ...
+await engine.execute(agent, input);
+
+await traces.export(new ConsoleTraceExporter());
+const json = await traces.export(new JsonTraceExporter());
 ```
+
+Pass the same `traces` instance (or event bus) you want Studio and exporters to share. See
+[Engine](/docs/engine).
+
+## What to export
+
+| Destination     | Use                                  |
+| --------------- | ------------------------------------ |
+| Console         | Local smoke tests                    |
+| JSON            | Bug reports, fixtures, Studio replay |
+| Custom exporter | Your observability pipeline          |
+
+Studio can load exported JSON / replay mock traces while you iterate. Live attachment to a
+running engine uses the same event shapes — keep panel code stream-oriented.
+
+## Events vs spans
+
+- **Events** — points in time (`tool.started`, `approval.granted`)
+- **Spans** — intervals with duration (provider call, tool execution)
+
+Studio’s timeline prefers spans; the trace viewer shows both.
 
 ## Best practices
 
-- Trace failed runs and successful runs.
-- Keep trace IDs in application logs.
-- Export raw traces for bug reports.
-- Use Studio while developing new tools.
+- Trace successes and failures
+- Keep `runId` in application error responses
+- Attach JSON exports to issues instead of screenshots of logs
+- Open Studio while building new tools — catch bad args early
 
 ## Common mistakes
 
-- Logging only final answers.
-- Dropping tool arguments from traces.
-- Treating provider latency as total run latency.
+- Logging only the final string answer
+- Dropping tool arguments from exports
+- Treating provider latency as total run latency
+- Calling tools outside the runner and wondering why traces are empty
+
+## Related
+
+- [Studio](/docs/studio)
+- [Runner](/docs/runner)
+- [Execution Pipeline](/docs/execution-pipeline)

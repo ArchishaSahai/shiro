@@ -68,7 +68,7 @@ export function Terminal({
           )}
         </div>
       </div>
-      <div className="min-h-[200px] p-6 font-mono text-[13px] leading-relaxed text-white/80 bg-[#09090b]">
+      <div className="min-h-[200px] bg-[#0b0b0d] p-6 font-mono text-[13px] leading-relaxed text-white/80">
         {children}
       </div>
     </div>

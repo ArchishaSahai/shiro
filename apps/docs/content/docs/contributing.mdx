@@ -1,39 +1,41 @@
 ---
 title: Contributing
-description: How to make changes that fit Shiro's runtime model.
+description: Change the runtime without breaking the ownership model.
 ---
 
 # Contributing
 
-Shiro is built around a small runtime surface. Contributions should preserve that shape:
-engine services are long-lived, runners own individual executions, and providers remain
-runtime adapters.
+Shiro’s value is a small set of ownership rules: the [engine](/docs/engine) is long-lived, the
+[runner](/docs/runner) owns one execution, [providers](/docs/providers) stay thin, and user state
+stays out of [agents](/docs/agents). Contributions should preserve that shape.
 
 ## Before changing code
 
-- Identify which runtime boundary the change belongs to.
-- Add or update trace events when behavior becomes observable.
-- Keep provider-specific logic out of core execution.
-- Keep user state out of agents.
+1. Name the boundary you are touching (engine, runner, provider, tool, trace, Studio)
+2. Decide what new events / spans operators will need
+3. Keep vendor-specific code out of `@shiro/core`
+4. Prefer tests that assert runner-visible behavior over private internals
 
 ## Good contributions
 
-- clearer runtime contracts
-- provider adapters
-- trace exporters
-- Studio integrations
-- focused docs examples
-- tests for runner behavior
+- Clearer runtime contracts and types
+- Provider adapters and plugins
+- Trace exporters
+- Studio panels that consume the shared event stream
+- Docs examples that compile against public APIs
+- Tests for handoff, approval, and validation paths
 
 ## Review checklist
 
-- Does the change preserve TypeScript inference?
-- Does it emit enough trace data to debug?
-- Does it avoid coupling core to one provider?
-- Does it keep approvals explicit?
-- Does it include a small example?
+- Does the change preserve TypeScript inference for agents / tools / output?
+- Does it emit enough trace data to debug a failure?
+- Does it avoid coupling core to one vendor?
+- Are approvals still explicit runtime events?
+- Is there a short docs note if behavior is user-visible?
 
 ## Documentation
 
-When adding a concept, explain what it is, why it exists, when to use it, and the common
-mistakes. Avoid marketing language.
+When you add a concept, answer: what it is, why it exists, when to use it, how it fits, and
+what to avoid. Skip marketing adjectives. Link related pages.
+
+See [Mental Model](/docs/core-concepts) and [Architecture](/docs/architecture).

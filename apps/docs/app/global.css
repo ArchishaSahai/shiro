@@ -67,12 +67,7 @@ code,
 pre,
 kbd,
 samp {
-  font-family:
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    "Liberation Mono",
-    monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 ::selection {
@@ -494,11 +489,7 @@ samp {
 
 .docs-search-result-type {
   color: #ec4899;
-  font-family:
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -622,11 +613,7 @@ samp {
   background: rgba(255, 255, 255, 0.055);
   padding: 2px 7px;
   color: rgba(255, 255, 255, 0.42);
-  font-family:
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 10px;
 }
 
@@ -757,12 +744,7 @@ samp {
   background: rgba(255, 255, 255, 0.035);
   color: rgba(255, 255, 255, 0.58);
   padding-inline: 0.45rem;
-  font-family:
-    "Geist Mono",
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace;
+  font-family: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 11px;
   line-height: 1;
   transition:
@@ -1003,12 +985,7 @@ samp {
     0 5px 14px rgba(255, 79, 216, 0.12),
     0 0 6px rgba(255, 79, 216, 0.08) !important;
   color: rgba(255, 255, 255, 0.76);
-  font-family:
-    "Geist Mono",
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace !important;
+  font-family: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace !important;
 }
 
 .shiki::before {
@@ -1019,17 +996,11 @@ samp {
   background:
     radial-gradient(circle at 16px 50%, #ff5f57 0 4.5px, transparent 5px),
     radial-gradient(circle at 33px 50%, #ffbd2e 0 4.5px, transparent 5px),
-    radial-gradient(circle at 50px 50%, #28c840 0 4.5px, transparent 5px),
-    #0d0d10;
+    radial-gradient(circle at 50px 50%, #28c840 0 4.5px, transparent 5px), #0d0d10;
   color: rgb(161 161 170);
   content: "terminal";
   padding-left: 74px;
-  font-family:
-    "Geist Mono",
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace;
+  font-family: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
@@ -1037,12 +1008,7 @@ samp {
 
 .shiki .fd-scroll-container {
   background: transparent !important;
-  font-family:
-    "Geist Mono",
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace !important;
+  font-family: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace !important;
   font-size: 14px !important;
   line-height: 1.9;
   padding: 26px 30px !important;

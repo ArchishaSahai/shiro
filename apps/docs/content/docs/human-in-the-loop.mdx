@@ -1,47 +1,88 @@
 ---
 title: Human-in-the-loop
-description: Pause runs for reviewer decisions before risky tools continue.
+description: Pause the runner before risky tools execute — approvals as runtime events.
 ---
 
 # Human-in-the-loop
 
-Human-in-the-loop control means a run can pause before an action is executed. The pause is a
-runtime event, not a hidden callback.
+Human-in-the-loop means a run can **pause** before a side effect. The pause is a runtime event
+with arguments, policy, and a decision — not a hidden callback in your route handler.
 
 ## Why approvals are runtime events
 
-Approvals need traceability. You should know which tool requested approval, which arguments it
-planned to use, who approved it, and how the run continued afterward.
+You need to answer:
 
-## Example
+- Which tool was about to run?
+- With which arguments?
+- Who approved or rejected?
+- How did the run continue?
+
+Those questions require structure. [Studio](/docs/studio)’s approval center and [traces](/docs/tracing)
+consume the same events the [runner](/docs/runner) emits.
+
+## Marking a tool
 
 ```ts
-const deploy = tool({
-  name: "deploy",
+import { tool } from "@shiro/core";
+import { z } from "zod";
+
+const deleteResource = tool({
+  name: "deleteResource",
+  description: "Permanently delete a cloud resource.",
   requiresApproval: true,
-  execute: deployService,
+  approvalDescription: "Destructive delete — irreversible.",
+  parameters: z.object({
+    resourceId: z.string(),
+  }),
+  execute: async ({ resourceId }) => resources.delete(resourceId),
 });
 ```
 
+Until approval is granted, `execute` should not run. Rejection is a **valid outcome**, not
+necessarily an unexpected exception.
+
 ## When to require approval
 
-Use approvals for actions that change external systems:
+| Require approval                | Usually skip              |
+| ------------------------------- | ------------------------- |
+| Refunds, payouts                | Read-only lookups         |
+| Deletes, revokes                | Idempotent cache warmups  |
+| Deployments, permission changes | Formatting / pure compute |
+| Outbound customer messages      | Internal dry-run tools    |
 
-- deployments
-- refunds
-- account deletion
-- outbound messages
-- permission changes
+## Guardrails vs approvals
+
+- **Guardrails** — policy checks that can allow, block, or modify a stage
+- **Approvals** — explicit human (or external) decision gates on tool calls
+
+Both belong in the runtime so they appear in traces. See core `Guardrail` types and
+`ApprovalManager` / policies when you need custom reviewers.
+
+## Workflow
+
+```txt
+model requests tool
+  → approval.requested  (Studio / reviewer notified)
+  → approval.granted | approval.rejected
+  → tool executes or run continues without the side effect
+```
 
 ## Best practices
 
-- Approve the tool call, not the final answer.
-- Include enough context for reviewers.
-- Treat rejection as a normal outcome.
-- Show approvals in Studio during development.
+- Approve the **tool call**, not the final chat sentence
+- Include enough args for a reviewer to decide without reading code
+- Log / trace the decision with the run id
+- Train operators on Studio’s approval center during development
 
 ## Common mistakes
 
-- Asking the model to self-approve.
-- Retrying rejected actions.
-- Hiding approvals outside the trace.
+- Asking the model to “confirm” in natural language and treating that as security
+- Retrying a rejected delete automatically
+- Implementing approvals outside Shiro so Studio never sees the pause
+- Approving after the mutation already happened
+
+## Related
+
+- [Tools](/docs/tools)
+- [Studio](/docs/studio)
+- [Examples](/docs/examples) — refund and delete-with-approval patterns

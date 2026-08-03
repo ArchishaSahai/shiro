@@ -1,88 +1,147 @@
 ---
 title: Architecture
-description: How Shiro moves a run through agents, providers, tools, memory, approvals, traces, and Studio.
+description: Why Shiro separates long-lived services from per-run execution.
 ---
 
 # Architecture
 
-Shiro separates long-lived services from per-run execution. The `Engine` owns registries,
-plugins, memory services, approval services, and event buses. A `Runner` is created for one
-execution and moves through provider calls, tool calls, handoffs, approvals, output validation,
-and trace emission.
+Shiro’s architecture exists to answer one question: **who owns the execution loop?**
+
+If your application owns it, every new requirement — retries, approvals, handoffs, memory,
+observability — lands as another `if` in a route handler. Shiro puts the loop in the runtime so
+application code defines _what_ should happen, and the runtime records _what did happen_.
 
 <ArchitectureDiagram />
 
-## Why the split exists
+## Design goal
 
-Agent systems usually fail when application code becomes the execution loop. Provider calls,
-tool retries, handoffs, approval pauses, and memory persistence end up scattered across route
-handlers and background jobs. Shiro keeps those concerns inside the runtime so your application
-defines the workflow instead of coordinating every transition.
+Make a run:
 
-## Engine
+1. **Isolated** — one runner, one execution state
+2. **Shareable** — one engine, many runs, shared providers and plugins
+3. **Inspectable** — events and traces you can open in [Studio](/docs/studio)
+4. **Composable** — tools, approvals, memory, and handoffs as explicit stages
 
-`Engine` is the long-lived service container. Create it once for a process, install providers
-and plugins, and reuse it for many runs.
+## Engine: shared infrastructure
 
-Use the engine for:
+The [Engine](/docs/engine) is a long-lived service container. It owns:
 
-- registering providers and plugins
-- owning shared memory and approval services
-- creating runners
-- exposing the public execution API
-- publishing events for Studio and trace exporters
+- provider registration (usually via [plugins](/docs/plugins))
+- tool and agent registries
+- session / memory services when configured
+- approval services when configured
+- the event bus used for observability
 
-Do not put per-user state on the engine. Use sessions and run context for that.
+```ts
+import { Engine, TraceManager } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
 
-## Runner
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
 
-`Runner` owns one execution. It keeps the current messages, tool state, handoff state,
-approval waits, output validation attempts, and emitted events together.
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
+```
 
-The runner exists so a run can be inspected after it completes. A trace is not a log file that
-you bolt on later; it is a structured record of what the runner did.
+Create it once per process. Register plugins before serving traffic. Do not hang per-user state
+on it — that belongs in [sessions](/docs/memory-sessions).
 
-## Providers
+## Runner: one execution
 
-Providers translate Shiro requests into model API calls. The provider contract is deliberately
-smaller than the engine contract. It should not know about memory, Studio, approval queues, or
-agent handoffs.
+`engine.execute()` creates a [Runner](/docs/runner). The runner keeps messages, tool state,
+handoff state, approval waits, validation attempts, and emitted events together for that run.
 
-## Tools
+```ts
+const result = await engine.execute(agent, "Look up INV-8821", {
+  sessionId: "customer_48",
+});
+```
 
-Tools run inside the execution lifecycle. That means a tool call can be traced, approved,
-retried, timed out, or handed to Studio without each application re-implementing the same
-control flow.
+The runner is why a failed run can be explained. The state you need is not scattered across
+queue workers and `console.log` calls.
+
+## Providers: thin adapters
+
+A [provider](/docs/providers) translates Shiro’s request shape into a vendor API and normalizes
+the response. It should not know about Studio, approvals, or memory. Vendor churn stays behind
+the adapter.
+
+In practice you install a provider through a plugin:
+
+```ts
+engine.use(new OpenAIPlugin({ apiKey, model: "gpt-5" }));
+```
+
+The agent then selects it by id:
+
+```ts
+const agent = new Agent({
+  name: "support",
+  instructions: "Help with billing questions.",
+  provider: "openai",
+});
+```
+
+## Tools: side effects with a policy boundary
+
+[Tools](/docs/tools) run inside the runner. That is what makes them:
+
+- visible in traces
+- eligible for approval
+- subject to timeouts
+- attributable to an agent and run id
+
+If you call the underlying function yourself, Shiro never sees it.
 
 ## Memory and sessions
 
-Memory is loaded before the provider call needs it and persisted after the run produces useful
-state. Sessions hold conversation history and durable context without changing the agent
-definition.
+[Sessions](/docs/memory-sessions) hold conversation continuity. Memory retrieval and compaction
+feed context into the run and persist useful state afterward. Agents stay reusable; sessions
+carry identity.
 
 ## Guardrails and approvals
 
-Guardrails decide whether a run or tool call should continue. Approvals are explicit pauses in
-the run. The runner records the pause, the reviewer decision, and the continuation.
+[Guardrails](/docs/human-in-the-loop) decide whether a stage should continue. Approvals are
+explicit pauses before risky tools. Both are runtime events — reviewers and Studio see the same
+pause the runner sees.
 
-## Studio
+## Handoffs
 
-Studio consumes the same events your code can subscribe to: provider calls, tool spans, handoffs,
-approval waits, memory reads, memory writes, validation attempts, and final output.
+[Handoffs](/docs/multi-agent) transfer control to another registered agent inside the same run.
+Use them when responsibility, tools, or approval policy change — not just to shorten a prompt.
 
-## Best practices
+## Traces and Studio
 
-- Keep the engine long-lived.
-- Keep agents declarative.
-- Put user-specific state in sessions.
-- Treat tools as typed side effects.
-- Trace every run you expect to debug.
-- Use approvals for actions that change external systems.
+Every important transition can emit an event. [Tracing](/docs/tracing) turns those into a
+structured record. [Studio](/docs/studio) visualizes timelines, graphs, tools, memory, approvals,
+and metrics from that record.
+
+```txt
+Runner events ──► TraceManager / exporters ──► Studio / JSON / logs
+```
+
+## Why not put everything on the agent?
+
+Agents that mutate themselves per user become impossible to share, cache, or test. Shiro keeps
+agents declarative and pushes identity into sessions, execution into runners, and infrastructure
+into the engine.
 
 ## Common mistakes
 
-- Creating a new engine for every request.
-- Calling providers directly from tools.
-- Storing user state on the agent.
-- Treating traces as plain text logs.
-- Implementing handoffs outside the runner.
+| Mistake                       | Better approach                                     |
+| ----------------------------- | --------------------------------------------------- |
+| New `Engine` per request      | One engine per process                              |
+| Provider calls outside Shiro  | Register a plugin; let the runner call the provider |
+| User state on the agent       | `sessionId` + memory                                |
+| Tools invoked manually        | `tool()` definitions on the agent                   |
+| Debugging from text logs only | Export traces; open them in Studio                  |
+
+## Related
+
+- [Mental Model](/docs/core-concepts)
+- [Execution Pipeline](/docs/execution-pipeline)
+- [Engine](/docs/engine) · [Runner](/docs/runner) · [Agents](/docs/agents)

@@ -1,46 +1,99 @@
 ---
 title: Runner
-description: The per-run coordinator for provider calls, tools, handoffs, approvals, memory, and output.
+description: The per-run coordinator for provider calls, tools, approvals, handoffs, and output.
 ---
 
 # Runner
 
-A `Runner` owns one execution. Application code usually does not instantiate it directly; the
-engine creates it when you call `execute()` or start a stream.
+A `Runner` owns **one** execution. Application code rarely constructs it directly —
+[`engine.execute()`](/docs/engine) creates it, injects shared services, and returns the result.
 
-## What it does
-
-The runner keeps the run coherent. It decides when to call the provider, execute tools, switch
-agents, pause for approval, load memory, validate output, and emit trace events.
+Think of the runner as the object you would want in a debugger: every transition for this run
+lives here.
 
 ## Why it exists
 
-Agent execution is stateful. If provider calls, tool calls, and approvals are coordinated by
-separate application code paths, the run becomes difficult to replay. The runner keeps those
-transitions in one place.
+Agent execution is stateful. If provider calls, tool calls, approvals, and handoffs are
+coordinated by separate application paths, you cannot reconstruct the run later. The runner
+keeps those transitions ordered and attributable to a single `runId`.
 
-## Example flow
+The runner answers: _what happened in this execution, and in what order?_
+
+## How you use it
+
+```ts
+const result = await engine.execute(agent, "Should we refund order ord_7741?", {
+  sessionId: "refund_441",
+});
+
+console.log(result.runId);
+console.log(result.output);
+```
+
+`RunResult` includes the run id, output, messages, finish reason, and run context. Observability
+comes from the engine’s event / trace pipeline — subscribe to events or export traces rather
+than expecting a hidden `result.trace` field.
+
+## What it coordinates
 
 ```txt
 run.started
-provider.call
-tool.execute
-approval.required
-approval.granted
-provider.call
-output.validated
-run.completed
+  → session / memory load
+  → provider.call
+  → tool.execute  (optional approval pause)
+  → handoff       (optional)
+  → provider.call
+  → output.validated
+run.completed | run.failed
 ```
+
+Exact stage order is documented in [Execution Pipeline](/docs/execution-pipeline).
+
+## Runner vs Engine
+
+|          | Engine          | Runner          |
+| -------- | --------------- | --------------- |
+| Lifetime | Process         | One run         |
+| Creates  | Runners         | —               |
+| Owns     | Shared services | Execution state |
+| Scale    | One (typically) | Many concurrent |
+
+See [Mental Model](/docs/core-concepts).
+
+## Observing a run
+
+Attach an event bus or `TraceManager` to the engine before executing. Studio and exporters
+consume those events:
+
+```ts
+import { JsonTraceExporter, TraceManager } from "@shiro/core";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+
+await engine.execute(agent, input);
+const json = await traces.export(new JsonTraceExporter());
+```
+
+Open the export in [Studio](/docs/studio), or keep it for a bug report. See [Tracing](/docs/tracing).
 
 ## Best practices
 
-- Let the engine create runners.
-- Subscribe to runner events for observability.
-- Treat a rejected approval as a normal outcome.
-- Keep tool side effects idempotent when possible.
+- Let the engine create runners
+- Pass `sessionId` when the conversation continues
+- Treat approval rejection as a normal outcome, not a mysterious crash
+- Keep mutating tools idempotent so a retried runner step is safe
 
 ## Common mistakes
 
-- Reimplementing the execution loop outside Shiro.
-- Mixing application logs with trace events.
-- Continuing a run manually after an approval pause.
+- Reimplementing the loop with manual provider + tool calls
+- Continuing a paused approval outside the runtime
+- Mixing unstructured application logs with “the run failed” and calling it done
+- Creating runners without going through a ready engine
+
+## Related
+
+- [Engine](/docs/engine)
+- [Tools](/docs/tools)
+- [Human-in-the-loop](/docs/human-in-the-loop)
+- [Studio](/docs/studio)

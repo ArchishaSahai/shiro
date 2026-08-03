@@ -11,6 +11,7 @@ import {
   GitBranch,
   Layers3,
   LockKeyhole,
+  Play,
   Search,
   ShieldCheck,
   Sparkles,
@@ -21,6 +22,9 @@ import { useEffect, useState } from "react";
 import { CopyCommand } from "@/components/copy-command";
 import { InteractiveDemo } from "@/components/interactive-demo";
 import { TerminalReplay, type TerminalLine } from "@/components/terminal-replay";
+
+/** Swap this for the published YouTube demo URL when ready. */
+const DEMO_VIDEO_URL = "https://www.youtube.com/watch?v=TODO";
 
 const navItems = [
   { href: "/docs", label: "Docs" },
@@ -205,6 +209,15 @@ function Hero() {
             >
               Start building
             </Link>
+            <a
+              className="shiro-button h-14 px-8 text-base"
+              href={DEMO_VIDEO_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Play aria-hidden="true" className="h-4 w-4 fill-current" />
+              Watch demo
+            </a>
             <Link className="shiro-button h-14 px-8 text-base" href="/docs/api-reference">
               API Reference
             </Link>

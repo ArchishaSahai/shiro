@@ -36,7 +36,7 @@ export function TraceViewer({ trace }: { readonly trace: StudioRunTrace }) {
       <CardHeader>
         <SectionHeading
           actions={<Badge>{trace.finalStatus}</Badge>}
-          description="Displays raw spans, emitted events, and exported JSON. Use it for audit trails, debugging, and sharing reproducible traces."
+          description="Raw spans, emitted events, and exported JSON for audit and debugging."
           icon={TerminalSquare}
         >
           Trace Viewer
@@ -108,7 +108,7 @@ export function TraceViewer({ trace }: { readonly trace: StudioRunTrace }) {
           <TabsContent value="spans">
             {spans.length === 0 ? (
               <EmptyState
-                description="No spans match the current search. Try a provider, tool, memory, or approval keyword."
+                description="No spans match the current search."
                 icon={Search}
                 title="No matching spans"
               />
@@ -170,9 +170,9 @@ export function TraceViewer({ trace }: { readonly trace: StudioRunTrace }) {
             </ScrollArea>
           </TabsContent>
           <TabsContent value="json">
-            <Terminal title={`trace-${trace.runId}.json`} copyText={json}>
+            <Terminal copyText={json} title={`trace-${trace.runId}.json`}>
               <ScrollArea className="max-h-[520px]">
-                <pre className="text-xs leading-relaxed text-white/80 font-mono">
+                <pre className="font-mono text-xs leading-relaxed text-white/80">
                   <code>{json}</code>
                 </pre>
               </ScrollArea>

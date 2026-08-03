@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import {
   Activity,
   ArrowRightLeft,
@@ -11,11 +11,8 @@ import {
   GitBranch,
   KeyRound,
   MemoryStick,
-  Moon,
   PlayCircle,
   Search,
-  Settings,
-  Sun,
   Timer,
   Upload,
   Workflow,
@@ -35,54 +32,54 @@ import { useTraceWorkspace } from "@/hooks/use-trace-workspace";
 import { formatDuration, providerLatency, toolLatency, totalTokens } from "@/lib/trace-utils";
 import type { LucideIcon } from "lucide-react";
 
-const sidebarItems: readonly { readonly label: string; readonly icon: LucideIcon }[] = [
-  { label: "Sessions", icon: Database },
-  { label: "Runs", icon: Activity },
-  { label: "Tracing", icon: GitBranch },
-  { label: "Execution Graph", icon: Workflow },
-  { label: "Memory", icon: MemoryStick },
-  { label: "Approvals", icon: CircleAlert },
-  { label: "Providers", icon: KeyRound },
-  { label: "Settings", icon: Settings },
+const sidebarItems: readonly {
+  readonly label: string;
+  readonly icon: LucideIcon;
+  readonly targetId: string;
+}[] = [
+  { label: "Sessions", icon: Database, targetId: "memory-section" },
+  { label: "Runs", icon: Activity, targetId: "runs-section" },
+  { label: "Tracing", icon: GitBranch, targetId: "trace-section" },
+  { label: "Execution Graph", icon: Workflow, targetId: "graph-section" },
+  { label: "Memory", icon: MemoryStick, targetId: "memory-section" },
+  { label: "Approvals", icon: CircleAlert, targetId: "approvals-section" },
+  { label: "Providers", icon: KeyRound, targetId: "metrics-section" },
 ];
 
 export function StudioDashboard() {
   const { error, loadFile, selectedRunId, selectedTrace, setSelectedRunId, snapshot } =
     useTraceWorkspace();
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [theme, setTheme] = useState<StudioTheme>("light");
+  const [activeItem, setActiveItem] = useState("Runs");
 
-  useEffect(() => {
-    const storedTheme = readStoredTheme();
-
-    if (storedTheme !== null) {
-      setTheme(storedTheme);
-      applyTheme(storedTheme);
-      return;
+  const handleSidebarClick = (label: string, targetId: string) => {
+    setActiveItem(label);
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-
-    const initialTheme = "dark";
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-  }, []);
+  };
 
   return (
     <main className="min-h-screen bg-[#070707] text-white">
       <div className="grid min-h-screen lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="hidden border-r border-white/[.08] bg-[#0b0b0d] px-4 py-5 lg:block">
+        <aside className="sticky top-0 z-20 hidden h-screen border-r border-white/[.08] bg-[#0b0b0d] px-4 py-5 lg:block">
           <div className="px-2">
             <p className="text-base font-semibold tracking-tight text-white">Studio</p>
             <p className="mt-1 font-mono text-[11px] text-white/36">support-agents</p>
           </div>
           <nav className="mt-8 space-y-1">
-            {sidebarItems.map(({ icon: Icon, label }, index) => (
+            {sidebarItems.map(({ icon: Icon, label, targetId }) => (
               <button
                 className={`group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm transition duration-200 hover:translate-x-0.5 hover:bg-white/[.045] hover:text-white ${
-                  index === 1
+                  activeItem === label
                     ? "bg-white/[.055] text-white shadow-[inset_2px_0_0_rgba(255,79,216,.8)]"
                     : "text-white/48"
                 }`}
                 key={label}
+                onClick={() => {
+                  handleSidebarClick(label, targetId);
+                }}
                 type="button"
               >
                 <Icon aria-hidden="true" className="h-4 w-4" />
@@ -93,7 +90,7 @@ export function StudioDashboard() {
         </aside>
 
         <div className="min-w-0">
-          <header className="border-b border-white/[.08] bg-[#070707]">
+          <header className="border-b border-white/[.08] bg-[#070707]/90 backdrop-blur">
             <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white">Shiro Studio</p>
@@ -116,20 +113,12 @@ export function StudioDashboard() {
                   <Code2 aria-hidden="true" className="h-4 w-4" />
                   GitHub
                 </a>
-                <ThemeToggle
-                  theme={theme}
-                  onThemeChange={(nextTheme) => {
-                    setTheme(nextTheme);
-                    applyTheme(nextTheme);
-                    localStorage.setItem(themeStorageKey, nextTheme);
-                  }}
-                />
               </div>
             </div>
           </header>
 
-          <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mx-auto max-w-[1500px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-[#ff4fd8]">
                   Trace workspace
@@ -176,12 +165,12 @@ export function StudioDashboard() {
                 value={String(snapshot.statistics.totalRuns)}
               />
               <MetricCard
-                accent="blue"
+                accent="pink"
                 icon={Boxes}
                 label="Tokens"
                 numericValue={totalTokens(selectedTrace)}
                 trend="current run"
-                value={String(totalTokens(selectedTrace) ?? "-")}
+                value={String(totalTokens(selectedTrace) ?? "—")}
               />
               <MetricCard
                 accent="amber"
@@ -206,6 +195,7 @@ export function StudioDashboard() {
                 value={String(selectedTrace.handoffs.length)}
               />
             </div>
+
             {error === null ? null : (
               <div
                 className="flex items-start gap-3 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100"
@@ -219,30 +209,49 @@ export function StudioDashboard() {
               </div>
             )}
 
-            <div className="mt-6 grid gap-6">
-              <section className="grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]">
+            <div className="grid gap-6">
+              <section
+                className="scroll-mt-6 grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]"
+                id="runs-section"
+              >
                 <RunExplorer
                   onSelectRun={setSelectedRunId}
                   selectedRunId={selectedRunId}
                   snapshot={snapshot}
                 />
-                <MetricsDashboard trace={selectedTrace} />
+                <div id="metrics-section">
+                  <MetricsDashboard trace={selectedTrace} />
+                </div>
               </section>
 
-              <ExecutionLog trace={selectedTrace} />
+              <div className="scroll-mt-6" id="log-section">
+                <ExecutionLog trace={selectedTrace} />
+              </div>
 
               <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-                <LiveTimeline trace={selectedTrace} />
-                <ExecutionGraph onSelectTool={setSelectedTool} trace={selectedTrace} />
+                <div className="scroll-mt-6" id="timeline-section">
+                  <LiveTimeline trace={selectedTrace} />
+                </div>
+                <div className="scroll-mt-6 h-full" id="graph-section">
+                  <ExecutionGraph onSelectTool={setSelectedTool} trace={selectedTrace} />
+                </div>
               </section>
 
               <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-                <ToolInspector selectedTool={selectedTool} trace={selectedTrace} />
-                <ApprovalCenter trace={selectedTrace} />
+                <div className="scroll-mt-6" id="tool-section">
+                  <ToolInspector selectedTool={selectedTool} trace={selectedTrace} />
+                </div>
+                <div className="scroll-mt-6" id="approvals-section">
+                  <ApprovalCenter trace={selectedTrace} />
+                </div>
               </section>
 
-              <MemorySessionExplorer trace={selectedTrace} />
-              <TraceViewer trace={selectedTrace} />
+              <div className="scroll-mt-6" id="memory-section">
+                <MemorySessionExplorer trace={selectedTrace} />
+              </div>
+              <div className="scroll-mt-6" id="trace-section">
+                <TraceViewer trace={selectedTrace} />
+              </div>
             </div>
           </div>
         </div>
@@ -260,54 +269,4 @@ function handleTraceFileChange(
   if (file !== null && file !== undefined) {
     void loadFile(file);
   }
-}
-
-type StudioTheme = "light" | "dark";
-
-const themeStorageKey = "shiro-studio-theme";
-
-function ThemeToggle({
-  onThemeChange,
-  theme,
-}: {
-  readonly theme: StudioTheme;
-  readonly onThemeChange: (theme: StudioTheme) => void;
-}) {
-  return (
-    <div
-      aria-label="Theme"
-      className="inline-flex h-9 rounded-lg border border-white/[.08] bg-white/[.045] p-1"
-      role="group"
-    >
-      {(["light", "dark"] as const).map((option) => (
-        <button
-          aria-pressed={theme === option}
-          className={`rounded px-2.5 text-sm font-medium capitalize transition ${
-            theme === option ? "bg-white/[.12] text-white" : "text-white/48 hover:text-white"
-          }`}
-          key={option}
-          onClick={() => {
-            onThemeChange(option);
-          }}
-          type="button"
-        >
-          {option === "light" ? (
-            <Sun aria-hidden="true" className="mr-1.5 inline h-3.5 w-3.5" />
-          ) : (
-            <Moon aria-hidden="true" className="mr-1.5 inline h-3.5 w-3.5" />
-          )}
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function applyTheme(theme: StudioTheme): void {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-}
-
-function readStoredTheme(): StudioTheme | null {
-  const value = localStorage.getItem(themeStorageKey);
-  return value === "light" || value === "dark" ? value : null;
 }

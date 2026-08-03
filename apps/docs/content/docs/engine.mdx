@@ -1,55 +1,102 @@
 ---
 title: Engine
-description: The long-lived runtime service that creates and observes runs.
+description: The long-lived runtime that owns shared services and creates runners.
 ---
 
 # Engine
 
-The `Engine` is the stable entrypoint for Shiro. It owns shared services and creates runners
-for individual executions.
+The `Engine` is Shiro’s process-scoped entrypoint. It does **not** run the agent loop itself.
+It wires shared services and creates a [Runner](/docs/runner) for each execution.
 
 ```ts
-const engine = new Engine({
-  providers,
-  plugins,
-  memory,
-  approvals,
-});
+import { Engine, TraceManager } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
 ```
-
-## What it owns
-
-- provider registry
-- plugin lifecycle
-- tool and agent registries
-- session and memory services
-- approval services
-- event bus
-- trace exporters
 
 ## Why it exists
 
-Without a long-lived engine, every request handler has to rebuild the same orchestration
-services. That makes tracing inconsistent and makes plugins hard to reason about.
+Without a long-lived engine, every request rebuilds provider clients, plugin state, and
+registries. Traces stop lining up. Plugins re-run setup. You lose the ability to share one
+observability pipeline across many runs.
 
-## When to create it
+The engine answers: _what infrastructure do all runs share?_
 
-Create the engine during application startup. Reuse it across requests and jobs.
+## What it owns
+
+- [Provider](/docs/providers) registration (typically via [plugins](/docs/plugins))
+- Tool and agent registries
+- Optional memory / session / approval services
+- Event bus used by [tracing](/docs/tracing) and [Studio](/docs/studio)
+- Lifecycle: `Created → Ready → Stopped`
+
+`engine.execute()` activates plugins if needed, ensures the engine is ready, creates a runner,
+and returns that runner’s result.
+
+## Creating and starting
+
+You usually do not call `start()` yourself. The first `execute()` transitions a newly created
+engine to `Ready`. Call `stop()` during process shutdown if you need an explicit teardown.
+
+```ts
+const result = await engine.execute(agent, "Summarize open invoices for acct_48");
+```
+
+## Registering agents
+
+For multi-agent work, register specialists the handoff strategy can resolve:
+
+```ts
+engine.registerAgent(billingAgent);
+engine.registerAgent(researchAgent);
+```
+
+See [Multi-Agent](/docs/multi-agent).
 
 ## What it does not do
 
-The engine does not run the loop directly. A runner owns one execution. The engine creates the
-runner, passes shared services to it, and receives events from it.
+| Not the engine’s job | Belongs to                          |
+| -------------------- | ----------------------------------- |
+| Provider call loop   | [Runner](/docs/runner)              |
+| Tool execution       | Runner + [tools](/docs/tools)       |
+| Per-user history     | [Sessions](/docs/memory-sessions)   |
+| Vendor HTTP details  | [Provider](/docs/providers) adapter |
+| Rendering timelines  | [Studio](/docs/studio)              |
+
+## When to create it
+
+| Environment   | Pattern                             |
+| ------------- | ----------------------------------- |
+| HTTP API      | One engine per process / worker     |
+| Queue worker  | One engine per worker process       |
+| CLI / scripts | One engine for the process lifetime |
+| Tests         | One engine per suite or test file   |
 
 ## Best practices
 
-- Create one engine per process or worker.
-- Keep credentials in provider configuration.
-- Register plugins before accepting traffic.
-- Export traces from the engine event stream.
+- Install plugins before accepting traffic
+- Pass a shared `TraceManager` (or event bus) into the engine
+- Keep credentials in provider / plugin config, not on agents
+- Reuse the engine across requests
 
 ## Common mistakes
 
-- Creating an engine for every HTTP request.
-- Storing user-specific state on the engine.
-- Calling providers directly from code that should run through Shiro.
+- `new Engine()` inside every request handler
+- Storing the current user on the engine
+- Calling `OpenAI` (or another SDK) directly after registering a Shiro provider
+- Expecting Studio to show runs that never went through `engine.execute()`
+
+## Related
+
+- [Runner](/docs/runner) — per-run execution
+- [Plugins](/docs/plugins) — how providers and exporters install
+- [Architecture](/docs/architecture) — system view

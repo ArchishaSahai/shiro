@@ -1,53 +1,71 @@
 ---
 title: Reliability
-description: Timeouts, retries, failure boundaries, and run behavior under partial failure.
+description: Timeouts, retries, and failure boundaries that match what actually failed.
 ---
 
 # Reliability
 
-Reliability in Shiro means the runtime knows where failure can happen. Provider calls, tools,
-handoffs, approvals, memory operations, and output validation all fail differently. Treating
-them as one generic error makes runs hard to debug and unsafe to retry.
-
-## Timeouts
-
-Use timeouts at the boundary where latency matters. Provider timeouts protect the execution
-loop from a slow model response. Tool timeouts protect the run from external services that do
-not return.
-
-```ts
-const agent = new Agent({
-  name: "support",
-  modelTimeoutMs: 30_000,
-  toolTimeoutMs: 10_000,
-});
-```
-
-## Retries
-
-Retry only operations that are safe to repeat. A read-only lookup tool is usually retryable.
-A payment, deployment, or mutation should not retry without idempotency.
+Reliability in Shiro means knowing **which boundary** failed. Provider timeouts, tool hangs,
+approval rejections, and validation errors need different responses. One generic `catch`
+makes unsafe retries likely.
 
 ## Failure boundaries
 
-Keep failure boundaries close to the thing that failed:
+| Boundary          | Typical signal              | Safe default                       |
+| ----------------- | --------------------------- | ---------------------------------- |
+| Provider          | timeout / HTTP / rate limit | Retry with backoff                 |
+| Tool (read)       | timeout / 5xx               | Retry if idempotent                |
+| Tool (write)      | partial failure             | Retry only with idempotency keys   |
+| Approval          | rejected                    | Surface to user; do not auto-retry |
+| Output validation | parse failure               | Repair policy or fail the run      |
+| Handoff           | unresolved agent            | Fix registration; do not loop      |
 
-- provider errors belong to provider spans
-- tool errors belong to tool spans
-- approval rejection belongs to the approval event
-- validation errors belong to output parsing
+See [Error Handling](/docs/error-handling).
+
+## Timeouts
+
+Bound the slow parts you do not control: model latency and external tools. Prefer configuring
+timeouts at the execution / tool edge rather than hoping the platform kills the process.
+
+Keep mutating tools short or explicitly async with a job id you can poll.
+
+## Retries
+
+Retry **reads** liberally; retry **writes** only when the operation is idempotent.
+
+```ts
+const issueRefund = tool({
+  name: "issueRefund",
+  requiresApproval: true,
+  parameters: z.object({
+    orderId: z.string(),
+    amount: z.number(),
+    idempotencyKey: z.string(),
+  }),
+  execute: async (input) => refunds.issue(input),
+});
+```
+
+## Trace failed runs
+
+A retry without a trace is a guess. Export failures with [Tracing](/docs/tracing) and inspect
+them in [Studio](/docs/studio) before changing prompts.
 
 ## Best practices
 
-- Use idempotency keys for mutating tools.
-- Set explicit timeouts before running in production.
-- Trace failed runs, not only successful runs.
-- Treat approval rejection as a valid outcome.
-- Store enough tool result data to reproduce failures.
+- Idempotency keys on refunds, deletes, deploys
+- Explicit timeouts before production traffic
+- Treat approval rejection as a valid outcome
+- Store enough tool I/O to reproduce bugs
 
 ## Common mistakes
 
-- Retrying a mutating tool without an idempotency key.
-- Catching every runtime error at the API route boundary.
-- Hiding provider errors inside tool responses.
-- Logging text instead of exporting structured traces.
+- Retrying payments because the provider timed out afterward
+- Catching all errors at the HTTP layer and returning 500
+- Hiding provider errors inside tool return strings
+
+## Related
+
+- [Tools](/docs/tools)
+- [Human-in-the-loop](/docs/human-in-the-loop)
+- [Runner](/docs/runner)

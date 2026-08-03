@@ -10,31 +10,37 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { formatDuration, type StudioRunTrace } from "@/lib/trace-utils";
 
 export function ApprovalCenter({ trace }: { readonly trace: StudioRunTrace }) {
+  const approvals = trace.approvals;
+
   return (
     <Card className="min-h-[360px]">
       <CardHeader>
         <SectionHeading
-          actions={<Badge>{String(trace.approvals.length)} requests</Badge>}
-          description="Shows human approval requests, policies, decisions, and latency. Use it to audit sensitive tool execution."
+          actions={<Badge>{String(approvals.length)} requests</Badge>}
+          description="Human approval requests, policies, decisions, and latency."
           icon={ShieldCheck}
         >
           Approval Center
         </SectionHeading>
       </CardHeader>
       <CardContent>
-        {trace.approvals.length === 0 ? (
-          <ApprovalEmptyState />
+        {approvals.length === 0 ? (
+          <EmptyPanel
+            action="Configure a sensitive tool"
+            description="Sensitive tool approval events appear here with policy, decision, and latency."
+            icon={ShieldCheck}
+            title="No approval requests"
+          />
         ) : (
           <ScrollArea className="max-h-[300px] pr-2">
             <div className="space-y-3">
-              {trace.approvals.map((approval, index) => (
+              {approvals.map((approval, index) => (
                 <motion.details
+                  animate={{ opacity: 1, y: 0 }}
                   className="group rounded-2xl border border-white/[.08] bg-white/[.02] p-4 transition hover:-translate-y-0.5 hover:border-white/[.16] hover:bg-white/[.04]"
                   initial={{ opacity: 0, y: 8 }}
-                  key={`${approval.toolName}-${approval.timestamp.toISOString()}`}
-                  transition={{ delay: index * 0.035, duration: 0.18 }}
-                  viewport={{ once: true }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  key={`${approval.toolName}-${String(index)}`}
+                  transition={{ duration: 0.18 }}
                 >
                   <summary className="cursor-pointer list-none">
                     <div className="flex items-start justify-between gap-3">
@@ -46,7 +52,7 @@ export function ApprovalCenter({ trace }: { readonly trace: StudioRunTrace }) {
                           <p className="truncate text-sm font-semibold text-white">
                             {approval.toolName}
                           </p>
-                          <p className="mt-1 text-xs text-white/40 font-mono">
+                          <p className="mt-1 font-mono text-xs text-white/40">
                             {approval.timestamp.toLocaleTimeString()}
                           </p>
                         </div>
@@ -57,9 +63,9 @@ export function ApprovalCenter({ trace }: { readonly trace: StudioRunTrace }) {
                     </div>
                   </summary>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                    <Fact label="Policy" value={approval.policy ?? "-"} />
+                    <Fact label="Policy" value={approval.policy ?? "—"} />
                     <Fact label="Duration" value={formatDuration(approval.durationMs)} />
-                    <Fact label="Approver" value={approval.approver ?? "-"} />
+                    <Fact label="Approver" value={approval.approver ?? "—"} />
                   </div>
                 </motion.details>
               ))}
@@ -71,21 +77,10 @@ export function ApprovalCenter({ trace }: { readonly trace: StudioRunTrace }) {
   );
 }
 
-function ApprovalEmptyState() {
-  return (
-    <EmptyPanel
-      action="Configure a sensitive tool"
-      description="Sensitive tool approval events will appear here with policy, decision, approver, and duration."
-      icon={ShieldCheck}
-      title="No approval requests"
-    />
-  );
-}
-
 function Fact({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-white/[.08] bg-white/[.02] p-2">
-      <p className="uppercase tracking-wide text-white/40 font-mono">{label}</p>
+      <p className="font-mono uppercase tracking-wide text-white/40">{label}</p>
       <p className="mt-1 truncate font-medium text-white">{value}</p>
     </div>
   );
@@ -95,14 +90,11 @@ function approvalTone(decision: string | undefined): "success" | "danger" | "war
   if (decision?.includes("granted") === true) {
     return "success";
   }
-
   if (decision?.includes("rejected") === true || decision?.includes("denied") === true) {
     return "danger";
   }
-
-  if (decision === undefined) {
+  if (decision === undefined || decision.includes("pending")) {
     return "warning";
   }
-
   return "default";
 }

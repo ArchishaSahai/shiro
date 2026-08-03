@@ -1,48 +1,107 @@
 ---
 title: Tools
-description: Run typed side effects inside the Shiro execution lifecycle.
+description: Typed side effects the model can request and the runner executes.
 ---
 
 # Tools
 
-Tools are functions the model can request and Shiro can execute. The important distinction is
-that the model does not run tools. The runner does.
+A tool is a function the **model may request** and the **runner executes**. That split is the
+point. The model does not run your database code. Shiro does — which is why the call can be
+traced, approved, timed out, and attributed to a `runId`.
 
 ```ts
-const issueRefund = tool({
-  name: "issueRefund",
-  description: "Issue a refund for an invoice.",
-  requiresApproval: true,
-  execute: async ({ invoiceId }: { invoiceId: string }) => {
-    return refunds.issue(invoiceId);
+import { tool } from "@shiro/core";
+import { z } from "zod";
+
+const lookupInvoice = tool({
+  name: "lookupInvoice",
+  description: "Fetch invoice status and amount by id.",
+  parameters: z.object({
+    invoiceId: z.string(),
+  }),
+  execute: async ({ invoiceId }) => {
+    return invoices.get(invoiceId);
   },
 });
 ```
 
 ## Why tools belong in the runtime
 
-Tool calls need observability and control. They can be slow, fail, mutate data, require
-approval, or produce sensitive output. Running tools through Shiro gives every call a trace
-span and a policy boundary.
+Tool calls fail, hang, and mutate state. If they live as ad-hoc functions in a route handler:
+
+- Studio cannot show arguments or latency
+- Approvals cannot pause before the side effect
+- Retries become guesswork
+
+The runner answers: _this agent, on this run, called this tool with these args._
+
+## Anatomy
+
+| Field              | Required | Purpose                                                    |
+| ------------------ | -------- | ---------------------------------------------------------- |
+| `name`             | yes      | Model-visible identifier                                   |
+| `parameters`       | yes      | Schema with `.parse()` (often Zod)                         |
+| `execute`          | yes      | Implementation                                             |
+| `description`      | no       | Helps the model choose the tool                            |
+| `requiresApproval` | no       | Pause before execute — see [HITL](/docs/human-in-the-loop) |
+
+Attach tools on the [agent](/docs/agents):
+
+```ts
+const agent = new Agent({
+  name: "support",
+  instructions: "Use lookupInvoice for billing questions.",
+  provider: "openai",
+  tools: [lookupInvoice],
+});
+```
 
 ## When to use a tool
 
-Use a tool when the agent needs code: database lookups, API calls, calculations, workflow
-actions, internal services, or writes to external systems.
+Use a tool when the agent needs **code**: lookups, writes, calculations, internal APIs,
+workflow triggers.
 
-Do not use tools for prompt-only instructions.
+Do not use a tool for pure language instructions. Prefer a clearer prompt or a structured
+output field.
+
+## Approval-gated tools
+
+```ts
+const issueRefund = tool({
+  name: "issueRefund",
+  description: "Issue a refund for an order.",
+  requiresApproval: true,
+  approvalDescription: "Refunds money to the customer.",
+  parameters: z.object({
+    orderId: z.string(),
+    amount: z.number().positive(),
+  }),
+  execute: async ({ orderId, amount }) => refunds.issue({ orderId, amount }),
+});
+```
+
+Reviewers see the planned arguments. Rejection is a normal outcome. See
+[Human-in-the-loop](/docs/human-in-the-loop) and the [Approval center](/docs/studio) in Studio.
 
 ## Best practices
 
-- Give tools narrow names.
-- Validate arguments.
-- Use approvals for destructive or external actions.
-- Add timeouts around slow services.
-- Make mutating tools idempotent.
+- Keep names stable and specific (`lookupInvoice`, not `helper`)
+- Return compact JSON — huge payloads waste tokens and clutter traces
+- Make mutating tools idempotent (keys, upserts) before enabling retries
+- Prefer one responsibility per tool
 
 ## Common mistakes
 
-- Letting tool schemas drift from implementation types.
-- Returning huge payloads to the model.
-- Retrying mutations without idempotency.
-- Calling tools outside the runner and expecting traces to include them.
+| Mistake                         | Fix                                  |
+| ------------------------------- | ------------------------------------ |
+| Missing `parameters`            | Always pass a schema with `.parse()` |
+| Calling `execute` from app code | Let the runner invoke the tool       |
+| Returning entire DB rows        | Project fields the model needs       |
+| Retrying payments blindly       | Idempotency + approval               |
+
+## Related
+
+- [Agents](/docs/agents)
+- [Runner](/docs/runner)
+- [Studio](/docs/studio) tool inspector
+- [Examples](/docs/examples) — invoice lookup, refunds, delete-with-approval

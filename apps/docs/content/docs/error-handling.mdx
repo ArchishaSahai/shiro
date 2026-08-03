@@ -1,49 +1,69 @@
 ---
 title: Error Handling
-description: Understand provider errors, tool failures, validation errors, approval rejection, and run failures.
+description: Handle provider, tool, approval, validation, and runtime failures differently.
 ---
 
 # Error Handling
 
-Shiro treats runtime failures by where they happen. A provider timeout, a rejected approval,
-a failed tool, and an invalid output schema need different handling.
+Shiro surfaces failures by **where** they happen. Your application should branch on that, not
+on a single string message.
 
-## Error categories
+## Categories
 
-| Category | Meaning |
-| --- | --- |
-| Provider error | The model adapter failed or timed out. |
-| Tool error | Tool execution failed or returned invalid data. |
-| Approval rejection | A reviewer rejected a requested action. |
-| Validation error | Final output did not match the schema. |
-| Runtime error | The runner could not continue safely. |
+| Category            | Meaning                       | Typical response                  |
+| ------------------- | ----------------------------- | --------------------------------- |
+| Provider error      | Adapter / model call failed   | Retry or degrade                  |
+| Tool error          | `execute` threw or timed out  | Fix args / service; retry if safe |
+| Approval rejection  | Reviewer denied the tool      | Tell the user; do not force       |
+| Validation error    | Output schema `.parse` failed | Repair or ask for clarification   |
+| Configuration error | Engine / agent misconfigured  | Fix startup; do not retry blindly |
+| Runtime error       | Runner cannot continue safely | Fail the run; keep the trace      |
 
-## Why categories matter
-
-Retries are not safe everywhere. A provider call may be retried. A refund tool should not retry
-unless the operation is idempotent. Approval rejection should usually become a user-facing
-outcome, not an exception.
+Core exports typed errors such as `ProviderError`, `ToolExecutionError`, `ValidationError`,
+`ApprovalRejectedError`, `ConfigurationError`, and `ShiroError`.
 
 ## Example
 
 ```ts
+import { ApprovalRejectedError, ShiroError } from "@shiro/core";
+
 try {
-  await engine.execute(agent, input);
+  return await engine.execute(agent, input, { sessionId });
 } catch (error) {
-  // Inspect the trace before deciding whether to retry.
+  if (error instanceof ApprovalRejectedError) {
+    return { ok: false, reason: "rejected_by_reviewer" };
+  }
+  if (error instanceof ShiroError) {
+    // Include error.run-related context / your trace runId in logs
+    throw error;
+  }
+  throw error;
 }
 ```
 
+Always preserve enough identity (`runId`, session id) to find the trace later.
+
+## Why categories matter
+
+Retries are not universally safe. A provider timeout mid-refund is not permission to call
+`issueRefund` again without an idempotency key. See [Reliability](/docs/reliability).
+
 ## Best practices
 
-- Inspect the trace before retrying.
-- Preserve run IDs in error responses.
-- Treat approval rejection as a valid result.
-- Add idempotency to mutating tools.
-- Normalize provider errors at the adapter boundary.
+- Inspect the [trace](/docs/tracing) before retrying
+- Return stable error codes to clients
+- Treat approval rejection as product behavior
+- Normalize vendor errors inside [providers](/docs/providers)
 
 ## Common mistakes
 
-- Catching everything as one generic error.
-- Retrying writes automatically.
-- Losing the trace when a run fails.
+- `catch (e) { res.status(500) }` for every failure mode
+- Retrying writes automatically
+- Losing traces when a run fails
+- Parsing error messages instead of using error types
+
+## Related
+
+- [Reliability](/docs/reliability)
+- [Tracing](/docs/tracing)
+- [Studio](/docs/studio)

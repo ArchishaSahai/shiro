@@ -1,45 +1,119 @@
 ---
 title: Agents
-description: Define instructions, tools, handoffs, provider preferences, and output contracts.
+description: Declarative behavior units — instructions, tools, provider, and output contract.
 ---
 
 # Agents
 
-An agent is a declarative description of behavior. It should say what the model is responsible
-for, which tools it can use, which agents it can hand off to, and what shape the final output
-must have.
+An `Agent` is a **declarative** description of behavior. It says what the model is responsible
+for, which provider to use, which tools it may request, and (optionally) what shape the final
+output must have.
+
+An agent does **not** execute runs. The [Runner](/docs/runner) does.
 
 ```ts
+import { Agent, tool } from "@shiro/core";
+import { z } from "zod";
+
+const lookupInvoice = tool({
+  name: "lookupInvoice",
+  description: "Fetch an invoice by id.",
+  parameters: z.object({
+    invoiceId: z.string(),
+  }),
+  execute: async ({ invoiceId }) => invoices.get(invoiceId),
+});
+
 const support = new Agent({
   name: "support",
-  instructions: "Help users resolve account and billing questions.",
-  tools: [lookupInvoice, issueRefund],
-  handoffs: [billing],
+  instructions: "Help users with account and billing questions. Prefer tools over guessing.",
+  provider: "openai",
+  tools: [lookupInvoice],
 });
 ```
 
 ## Why agents are declarative
 
-The runner owns execution. Agents should not contain request-specific state or hidden control
-flow. Keeping agents declarative makes runs easier to trace, test, and hand off.
+If agents mutate themselves per request — rewriting instructions, attaching the current user,
+stashing conversation history — they stop being reusable configuration. You cannot cache them,
+test them in isolation, or register them safely for [handoffs](/docs/multi-agent).
+
+| Put this on the agent | Put this elsewhere                               |
+| --------------------- | ------------------------------------------------ |
+| Role instructions     | User identity → [session](/docs/memory-sessions) |
+| Tool allowlist        | Conversation history → session / memory          |
+| Output schema         | Secrets → env / provider plugin                  |
+| Provider id           | One-off overrides → `execute` options            |
+
+## Required fields
+
+| Field          | Purpose                                                       |
+| -------------- | ------------------------------------------------------------- |
+| `name`         | Identity in traces, events, and registries                    |
+| `instructions` | Role and policy for the model                                 |
+| `provider`     | Provider instance or registered provider id (e.g. `"openai"`) |
+
+Optional: `tools`, `output`, `guardrails`, `middleware`, `memory`, `sessionStore`,
+`humanApproval`, `handoff`, `tracer`, `events`, `metadata`.
+
+## Builder API
+
+Same immutable result, fluent construction:
+
+```ts
+const agent = Agent.builder()
+  .name("support")
+  .instructions("Help users with billing questions.")
+  .provider("openai")
+  .tool(lookupInvoice)
+  .output(
+    z.object({
+      summary: z.string(),
+      nextStep: z.enum(["close", "escalate", "refund_review"]),
+    })
+  )
+  .build();
+```
 
 ## When to create multiple agents
 
-Use multiple agents when responsibility changes, not just when prompts get long. A billing
-agent, research agent, and deployment agent may have different tools, approvals, and output
-requirements.
+Create another agent when **responsibility** changes, not when a prompt feels long.
+
+Good splits:
+
+- triage vs billing vs research
+- planner vs executor
+- intake vs remediation
+
+Bad splits:
+
+- “short prompt agent” and “long prompt agent” with the same tools
+- one agent per user
+
+Register specialists with the engine when using handoffs — see [Multi-Agent](/docs/multi-agent).
+
+## Structured output
+
+When another system consumes the answer, attach an `output` schema. Shiro validates before
+returning `result.output`. See [Structured Outputs](/docs/structured-outputs).
 
 ## Best practices
 
-- Give each agent a narrow responsibility.
-- Keep tool access explicit.
-- Use handoffs for domain changes.
-- Keep user state in sessions.
-- Validate final output when another system consumes it.
+- Narrow tools to what the role should actually call
+- Prefer explicit tools over burying business rules in a giant prompt
+- Keep instructions stable; put user facts in sessions
+- Name agents for operators (`billing`, `refund`) — those names show up in Studio
 
 ## Common mistakes
 
-- Using one agent for every domain.
-- Adding tools that the agent should never call.
-- Mutating agent instructions per user.
-- Hiding business rules inside a long prompt.
+- Omitting `provider` (required)
+- Adding every tool “just in case”
+- Mutating `instructions` per user
+- Implementing handoffs by starting a second `execute()` manually
+
+## Related
+
+- [Tools](/docs/tools)
+- [Providers](/docs/providers)
+- [Memory & Sessions](/docs/memory-sessions)
+- [Quick Start](/docs/quick-start)

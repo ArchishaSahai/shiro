@@ -1,45 +1,63 @@
 ---
 title: Streaming
-description: Consume run events as they happen instead of waiting for final output.
+description: Observe run progress through runtime events — not only provider token deltas.
 ---
 
 # Streaming
 
-Streaming exposes execution while the run is still moving. You can show text deltas, tool
-activity, approval waits, handoffs, memory events, and final output from the same stream.
+“Streaming” in Shiro means **seeing the run while it is still moving**. Provider token deltas
+are one signal. Tool starts, approval waits, handoffs, and completion events are equally
+important — and they are what [Studio](/docs/studio) timelines are built from.
 
-## Why streaming is separate from providers
+## Why this is broader than provider streaming
 
-Provider streaming is only one part of a run. Shiro streaming includes runtime events that
-happen before and after provider calls.
+If you only stream model text, operators miss:
 
-## Example
+- which tool is hanging
+- that an approval is blocking progress
+- that a handoff changed the active agent
+
+Subscribe to the engine’s event bus / `TraceManager`, or open Studio while developing.
+
+## Observing events
 
 ```ts
-for await (const event of engine.stream(agent, input)) {
-  console.log(event.type, event);
-}
+import { Engine, ShiroEventType, TraceManager } from "@shiro/core";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+
+// Execute as usual — exporters and Studio consume the same event stream.
+await engine.execute(agent, input);
 ```
 
-## When to use streaming
+Provider adapters may also implement `stream()` for token-level deltas. Use that for UI typing
+effects; use runtime events for operational truth.
 
-Use streaming when the user or operator needs to see progress:
+## When to care
 
-- long tool calls
-- multi-agent handoffs
-- approval waits
-- Studio timelines
-- terminal or CLI output
+| Need                  | Prefer                       |
+| --------------------- | ---------------------------- |
+| Live operator view    | Studio + runtime events      |
+| Chat typing indicator | Provider stream deltas       |
+| Progress in a CLI     | Event types → terminal lines |
+| Long tool calls       | Tool started/finished events |
 
 ## Best practices
 
-- Render event types differently.
-- Keep text deltas separate from trace events.
-- Do not assume the first event is model text.
-- Treat approval waits as stream states.
+- Render event types differently from text deltas
+- Keep `runId` on every UI update
+- Treat approval waits as first-class states
+- Do not assume the first event is model text
 
 ## Common mistakes
 
-- Streaming provider text only.
-- Hiding tool failures until the end.
-- Dropping run IDs from stream events.
+- Streaming provider text only and calling the run “observable”
+- Hiding tool failures until the final message
+- Dropping run ids from client events
+
+## Related
+
+- [Tracing](/docs/tracing)
+- [Studio](/docs/studio)
+- [Providers](/docs/providers)

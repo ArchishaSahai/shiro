@@ -25,7 +25,7 @@ export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
       <CardHeader>
         <SectionHeading
           actions={<span className="text-xs text-white/45">{String(items.length)} spans</span>}
-          description="Shows the ordered execution lifecycle with timestamps and durations. Use it to understand where time was spent."
+          description="Ordered execution lifecycle with timestamps and durations."
           icon={Clock3}
         >
           Live Timeline
@@ -35,25 +35,24 @@ export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
         {items.length === 0 ? (
           <EmptyState
             action="Load a trace JSON"
-            description="Timeline spans will appear here as provider calls, tools, approvals, memory, and handoffs are recorded."
+            description="Timeline spans appear for provider calls, tools, approvals, memory, and handoffs."
             icon={Clock3}
             title="No timeline spans"
           />
         ) : (
-          <ScrollArea className="max-h-[360px] pr-2">
-            <div className="space-y-4 relative before:absolute before:left-[17px] before:top-3 before:bottom-3 before:w-[1px] before:bg-white/[.06]">
+          <ScrollArea className="max-h-[480px] pr-2">
+            <div className="relative space-y-4 before:absolute before:bottom-3 before:left-[17px] before:top-3 before:w-px before:bg-white/[.06]">
               {items.map((span, index) => (
                 <motion.div
-                  className="grid grid-cols-[36px_1fr] gap-3 relative z-10"
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 grid grid-cols-[36px_1fr] gap-3"
                   initial={{ opacity: 0, x: -8 }}
                   key={span.spanId}
-                  transition={{ delay: index * 0.025, duration: 0.18 }}
-                  viewport={{ once: true }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: Math.min(index * 0.02, 0.2), duration: 0.18 }}
                 >
                   <div className="flex flex-col items-center">
                     <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ring-4 ring-[#070707] ${dotColor(span.category)}`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full ring-4 ring-[#070707] ${dotColor(span.category, span.status)}`}
                     >
                       <TimelineIcon category={span.category} />
                     </span>
@@ -66,19 +65,21 @@ export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
                             <p className="truncate text-xs font-semibold text-white/95">
                               {span.name}
                             </p>
-                            <p className="mt-0.5 text-[10px] text-white/40 font-mono">
+                            <p className="mt-0.5 font-mono text-[10px] text-white/40">
                               {span.startTime.toLocaleTimeString()}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <Badge>{span.category}</Badge>
-                            <p className="rounded-full bg-white/[.04] border border-white/[.06] px-2 py-0.5 text-[10px] text-white/60 font-mono">
-                              {formatDuration(span.durationMs)}
+                            <p className="rounded-full border border-white/[.06] bg-white/[.04] px-2 py-0.5 font-mono text-[10px] text-white/60">
+                              {span.status === "running" || span.status === "pending"
+                                ? "live"
+                                : formatDuration(span.durationMs)}
                             </p>
                           </div>
                         </div>
                       </summary>
-                      <div className="mt-3 rounded-lg border border-white/[.06] bg-black/40 p-2.5 text-[11px] text-white/60 font-mono space-y-1">
+                      <div className="mt-3 space-y-1 rounded-lg border border-white/[.06] bg-black/40 p-2.5 font-mono text-[11px] text-white/60">
                         <div>
                           <span className="text-white/30">status:</span> {span.status}
                         </div>
@@ -87,11 +88,16 @@ export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
                         </div>
                       </div>
                       <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/[.04]">
-                        <div
-                          className="h-full rounded-full bg-[#ff4fd8]"
-                          style={{
-                            width: `${String(Math.min(100, Math.max(8, span.durationMs ?? 0) / 12))}%`,
+                        <motion.div
+                          animate={{
+                            width:
+                              span.status === "running" || span.status === "pending"
+                                ? "64%"
+                                : `${String(Math.min(100, Math.max(8, (span.durationMs ?? 0) / 12)))}%`,
                           }}
+                          className="h-full rounded-full bg-[#ff4fd8]"
+                          initial={{ width: "8%" }}
+                          transition={{ duration: 0.35 }}
                         />
                       </div>
                     </details>
@@ -106,15 +112,13 @@ export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
   );
 }
 
-function dotColor(category: string): string {
-  if (category.includes("tool")) {
+function dotColor(category: string, status: string): string {
+  if (status === "running" || status === "pending") {
+    return "bg-[#ff4fd8]/15 text-[#ff4fd8] ring-1 ring-[#ff4fd8]/30";
+  }
+  if (category.includes("tool") || category.includes("approval")) {
     return "bg-[#ff4fd8]/10 text-[#ff4fd8] ring-1 ring-[#ff4fd8]/20";
   }
-
-  if (category.includes("approval")) {
-    return "bg-[#ff4fd8]/10 text-[#ff4fd8] ring-1 ring-[#ff4fd8]/20";
-  }
-
   return "bg-white/[.06] text-white/80 ring-1 ring-white/[.10]";
 }
 
@@ -122,22 +126,17 @@ function TimelineIcon({ category }: { readonly category: string }) {
   if (category.includes("provider")) {
     return <KeyRound aria-hidden="true" className="h-4 w-4" />;
   }
-
   if (category.includes("tool")) {
     return <Boxes aria-hidden="true" className="h-4 w-4" />;
   }
-
   if (category.includes("approval")) {
     return <ShieldCheck aria-hidden="true" className="h-4 w-4" />;
   }
-
   if (category.includes("memory")) {
     return <Database aria-hidden="true" className="h-4 w-4" />;
   }
-
   if (category.includes("handoff")) {
     return <GitBranch aria-hidden="true" className="h-4 w-4" />;
   }
-
   return <CheckCircle2 aria-hidden="true" className="h-4 w-4" />;
 }

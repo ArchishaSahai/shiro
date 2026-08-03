@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface MetricCardProps {
-  readonly accent?: "neutral" | "blue" | "green" | "amber" | "red";
+  readonly accent?: "neutral" | "pink" | "green" | "amber" | "red";
   readonly icon: LucideIcon;
   readonly label: string;
   readonly numericValue?: number | undefined;
@@ -27,7 +27,7 @@ export function MetricCard({
 
   return (
     <motion.div
-      className="group rounded-2xl border border-white/[.08] bg-[#0e0e11] p-4 shadow-[0_8px_24px_rgba(0,0,0,.4)] outline-none transition duration-200 hover:border-white/[.12]"
+      className="group rounded-2xl border border-white/[.08] bg-[#0e0e11] p-4 shadow-[0_8px_24px_rgba(0,0,0,.4)] outline-none transition duration-200 hover:border-[#ff4fd8]/25 hover:shadow-[0_12px_36px_rgba(0,0,0,.5),0_0_28px_rgba(255,79,216,.22)]"
       initial={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.24, ease: "easeOut" }}
       viewport={{ once: true }}
@@ -75,9 +75,9 @@ function useAnimatedValue(value: number | undefined, fallback: string, suffix: s
 function accentClass(accent: MetricCardProps["accent"]): string {
   const classes = {
     amber: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
-    blue: "bg-[#ff4fd8]/10 text-[#ff4fd8] ring-1 ring-[#ff4fd8]/20",
     green: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
     neutral: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
+    pink: "bg-[#ff4fd8]/10 text-[#ff4fd8] ring-1 ring-[#ff4fd8]/20",
     red: "bg-red-500/10 text-red-300 ring-1 ring-red-400/20",
   };
 

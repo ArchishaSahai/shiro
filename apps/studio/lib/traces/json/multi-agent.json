@@ -1,0 +1,354 @@
+{
+  "aliases": ["multi-agent", "examples/multi-agent", "traces/multi-agent", "ops-agent"],
+  "agentName": "Operations Manager",
+  "command": "shiro run multi-agent",
+  "description": "Operations manager orchestrates research, security, and deploy approval.",
+  "events": [
+    {
+      "id": "run_prod_rollout_7fc2_run.started_0",
+      "offsetMs": 0,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "run.started",
+      "message": "$ shiro run multi-agent",
+      "terminalKind": "command"
+    },
+    {
+      "id": "run_prod_rollout_7fc2_engine.started_1",
+      "offsetMs": 150,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "engine.started",
+      "message": "✓ Engine started",
+      "terminalKind": "success",
+      "payload": {
+        "agentName": "Operations Manager",
+        "model": "gpt-5",
+        "provider": "openai",
+        "sessionId": "session_prod_rollout"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_provider.loading_2",
+      "offsetMs": 340,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "provider.loading",
+      "message": "→ Loading providers...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_prod_rollout_7fc2_provider.connected_3",
+      "offsetMs": 620,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "provider.connected",
+      "message": "✓ OpenAI connected",
+      "terminalKind": "success",
+      "payload": {
+        "provider": "openai",
+        "model": "gpt-5"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_runner.creating_4",
+      "offsetMs": 780,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "runner.creating",
+      "message": "→ Creating runner...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_prod_rollout_7fc2_memory.session_loaded_5",
+      "offsetMs": 920,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "memory.session_loaded",
+      "message": "→ Memory load rollout session",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "session_loaded",
+        "messageCount": 14,
+        "sessionId": "session_prod_rollout"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_agent.calling_6",
+      "offsetMs": 1080,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "agent.calling",
+      "message": "→ Calling operations manager...",
+      "terminalKind": "event",
+      "payload": {
+        "agentName": "Operations Manager"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_provider.call.started_7",
+      "offsetMs": 1240,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "provider.call.started",
+      "message": "→ Provider call gpt-5",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "spanId": "provider:0"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_provider.call.completed_8",
+      "offsetMs": 1760,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "provider.call.completed",
+      "message": "✓ Provider responded (520ms)",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 520,
+        "finishReason": "tool_calls",
+        "inputTokens": 1100,
+        "latencyMs": 520,
+        "outputTokens": 140,
+        "spanId": "provider:0",
+        "totalTokens": 1240
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_handoff.started_9",
+      "offsetMs": 1920,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "handoff.started",
+      "message": "→ Handoff → research",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Research Agent",
+        "reason": "Collect deployment context.",
+        "sourceAgent": "Operations Manager",
+        "spanId": "handoff:Operations Manager:Research Agent"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_tool.started_10",
+      "offsetMs": 2100,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "tool.started",
+      "message": "→ Tool weather()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "city": "Pune"
+        },
+        "spanId": "tool:weather",
+        "toolName": "weather"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_tool.completed_11",
+      "offsetMs": 2480,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "tool.completed",
+      "message": "✓ weather risk medium",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 380,
+        "result": {
+          "condition": "rain",
+          "risk": "medium"
+        },
+        "spanId": "tool:weather",
+        "status": "completed",
+        "toolName": "weather"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_handoff.completed_12",
+      "offsetMs": 2620,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "handoff.completed",
+      "message": "✓ Research handoff complete",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Research Agent",
+        "durationMs": 700,
+        "reason": "Collect deployment context.",
+        "sourceAgent": "Operations Manager",
+        "spanId": "handoff:Operations Manager:Research Agent"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_handoff.started_13",
+      "offsetMs": 2780,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "handoff.started",
+      "message": "→ Handoff → security",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Security Agent",
+        "reason": "Verify rollout safety.",
+        "sourceAgent": "Operations Manager",
+        "spanId": "handoff:Operations Manager:Security Agent"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_tool.started_14",
+      "offsetMs": 2960,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "tool.started",
+      "message": "→ Tool deploy-check()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "region": "bom1",
+          "service": "api"
+        },
+        "spanId": "tool:deploy-check",
+        "toolName": "deploy-check"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_approval.requested_15",
+      "offsetMs": 3180,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "approval.requested",
+      "message": "→ Approval requested",
+      "terminalKind": "warning",
+      "payload": {
+        "policy": "destructive-action",
+        "spanId": "approval:deploy-check",
+        "toolName": "deploy-check"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_approval.granted_16",
+      "offsetMs": 3620,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "approval.granted",
+      "message": "✓ Approved by Maya Chen",
+      "terminalKind": "success",
+      "payload": {
+        "approver": "Maya Chen",
+        "decision": "approval.granted",
+        "durationMs": 440,
+        "policy": "destructive-action",
+        "spanId": "approval:deploy-check",
+        "toolName": "deploy-check"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_tool.completed_17",
+      "offsetMs": 3840,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "tool.completed",
+      "message": "✓ deploy allowed",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 880,
+        "result": {
+          "allowed": true
+        },
+        "spanId": "tool:deploy-check",
+        "status": "completed",
+        "toolName": "deploy-check"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_handoff.completed_18",
+      "offsetMs": 3980,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "handoff.completed",
+      "message": "✓ Security handoff complete",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Security Agent",
+        "durationMs": 1200,
+        "reason": "Verify rollout safety.",
+        "sourceAgent": "Operations Manager",
+        "spanId": "handoff:Operations Manager:Security Agent"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_memory.compacted_19",
+      "offsetMs": 4140,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "memory.compacted",
+      "message": "→ Memory compact + store",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "compacted",
+        "messageCount": 22,
+        "sessionId": "session_prod_rollout"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_memory.stored_20",
+      "offsetMs": 4280,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "memory.stored",
+      "message": "→ Memory store decision",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "stored",
+        "recordCount": 2,
+        "sessionId": "session_prod_rollout"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_provider.call.started_21",
+      "offsetMs": 4440,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "provider.call.started",
+      "message": "→ Provider call gpt-5",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "spanId": "provider:1"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_provider.call.completed_22",
+      "offsetMs": 4980,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "provider.call.completed",
+      "message": "✓ Response generated",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 540,
+        "estimatedCost": 0.028,
+        "finishReason": "completed",
+        "inputTokens": 1600,
+        "latencyMs": 540,
+        "outputTokens": 360,
+        "spanId": "provider:1",
+        "totalTokens": 1960
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_response.completed_23",
+      "offsetMs": 5120,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "response.completed",
+      "message": "Assistant response",
+      "terminalKind": "markdown",
+      "payload": {
+        "finalOutput": "# Multi-agent rollout review\n\n**Operations Manager** coordinated research and security before approving the deploy window.\n\n## Flow\n\n```\nOperations Manager\n  ├─ Research Agent  → context pack\n  └─ Security Agent  → rollout safety\n       └─ approval: deploy-check\n```\n\n| Agent | Outcome |\n| --- | --- |\n| Research | Weather dependency noted |\n| Security | Risk low |\n| Ops | Window approved |\n\n### Final call\n\nDeployment risk is **low**. Weather dependency checked and rollout window approved.\n\n- [x] Context gathered\n- [x] Safety verified\n- [x] Deploy check approved\n",
+        "markdown": "# Multi-agent rollout review\n\n**Operations Manager** coordinated research and security before approving the deploy window.\n\n## Flow\n\n```\nOperations Manager\n  ├─ Research Agent  → context pack\n  └─ Security Agent  → rollout safety\n       └─ approval: deploy-check\n```\n\n| Agent | Outcome |\n| --- | --- |\n| Research | Weather dependency noted |\n| Security | Risk low |\n| Ops | Window approved |\n\n### Final call\n\nDeployment risk is **low**. Weather dependency checked and rollout window approved.\n\n- [x] Context gathered\n- [x] Safety verified\n- [x] Deploy check approved\n"
+      }
+    },
+    {
+      "id": "run_prod_rollout_7fc2_run.completed_24",
+      "offsetMs": 5280,
+      "runId": "run_prod_rollout_7fc2",
+      "type": "run.completed",
+      "message": "✓ Run completed (3.4s)",
+      "terminalKind": "success",
+      "payload": {
+        "estimatedCost": 0.028,
+        "finalOutput": "# Multi-agent rollout review\n\n**Operations Manager** coordinated research and security before approving the deploy window.\n\n## Flow\n\n```\nOperations Manager\n  ├─ Research Agent  → context pack\n  └─ Security Agent  → rollout safety\n       └─ approval: deploy-check\n```\n\n| Agent | Outcome |\n| --- | --- |\n| Research | Weather dependency noted |\n| Security | Risk low |\n| Ops | Window approved |\n\n### Final call\n\nDeployment risk is **low**. Weather dependency checked and rollout window approved.\n\n- [x] Context gathered\n- [x] Safety verified\n- [x] Deploy check approved\n",
+        "finalStatus": "completed",
+        "markdown": "# Multi-agent rollout review\n\n**Operations Manager** coordinated research and security before approving the deploy window.\n\n## Flow\n\n```\nOperations Manager\n  ├─ Research Agent  → context pack\n  └─ Security Agent  → rollout safety\n       └─ approval: deploy-check\n```\n\n| Agent | Outcome |\n| --- | --- |\n| Research | Weather dependency noted |\n| Security | Risk low |\n| Ops | Window approved |\n\n### Final call\n\nDeployment risk is **low**. Weather dependency checked and rollout window approved.\n\n- [x] Context gathered\n- [x] Safety verified\n- [x] Deploy check approved\n",
+        "totalTokens": 3200
+      }
+    }
+  ],
+  "id": "multi-agent",
+  "model": "gpt-5",
+  "provider": "openai",
+  "sessionId": "session_prod_rollout",
+  "title": "Multi-Agent Ops"
+}

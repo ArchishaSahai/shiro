@@ -5,41 +5,70 @@ description: Validate final answers before another system consumes them.
 
 # Structured Outputs
 
-Structured output gives a run a final contract. Instead of trusting free text, Shiro validates
-the model response against a schema before returning it to your application.
+Structured output gives a run a **final contract**. Instead of trusting free text, Shiro
+validates the model response with a schema that exposes `.parse()` before returning
+`result.output`.
 
-## Why it matters
+## Why it exists
 
-Agents often feed other systems: tickets, workflows, databases, dashboards, or APIs. Those
-systems need predictable data.
-
-## Example
+Agents feed tickets, workflows, databases, and APIs. Those consumers need fields, enums, and
+types — not a paragraph that _usually_ contains a JSON blob.
 
 ```ts
-const agent = new Agent({
-  name: "triage",
-  output: z.object({
-    priority: z.enum(["low", "medium", "high"]),
-    summary: z.string(),
-    needsHuman: z.boolean(),
-  }),
+import { Agent } from "@shiro/core";
+import { z } from "zod";
+
+const weatherOutput = z.object({
+  city: z.string(),
+  condition: z.string(),
+  temperature: z.number(),
 });
+
+const agent = new Agent({
+  name: "weather",
+  instructions: "Return weather as structured data only.",
+  provider: "openai",
+  output: weatherOutput,
+});
+
+const result = await engine.execute(agent, "Sample weather for Pune: 24C, cloudy.");
+
+// result.output is typed / parsed
+console.log(result.output.city, result.output.temperature);
 ```
+
+This matches the repo’s `examples/basic-agent` pattern.
 
 ## When to use it
 
-Use structured output when the result leaves the chat surface or drives another system.
+| Use structured output          | Prefer text           |
+| ------------------------------ | --------------------- |
+| Downstream code reads fields   | Human-only chat reply |
+| Enums drive workflow branching | Exploratory Q&A       |
+| APIs need predictable JSON     | One-off summaries     |
+
+## Validation and repair
+
+Validation failures are runtime events. Core includes output managers and repair strategies so
+a failed parse can be retried under policy instead of crashing silently. Always inspect traces
+when structured output flaps — see [Tracing](/docs/tracing) and [Error Handling](/docs/error-handling).
 
 ## Best practices
 
-- Keep schemas small.
-- Use enums for decisions.
-- Validate before side effects.
-- Trace validation failures.
-- Avoid deeply nested objects unless the consumer needs them.
+- Keep schemas small and flat when possible
+- Prefer enums for decisions (`priority`, `nextStep`)
+- Validate **before** firing side effects that depend on the shape
+- Trace validation failures with the run id
 
 ## Common mistakes
 
-- Asking the model for JSON without validating it.
-- Returning optional fields that downstream code treats as required.
-- Using structured output to hide unclear instructions.
+- Asking for JSON in the prompt without an `output` schema
+- Optional fields that downstream code treats as required
+- Deeply nested objects nobody consumes
+- Using structured output to paper over unclear instructions
+
+## Related
+
+- [Agents](/docs/agents)
+- [Examples](/docs/examples) — structured weather
+- [Quick Start](/docs/quick-start)

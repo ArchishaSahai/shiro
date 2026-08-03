@@ -1,57 +1,84 @@
 ---
 title: Installation
-description: Install the Shiro runtime and a provider adapter.
+description: Install the runtime, a provider plugin, and verify the first execute call.
 ---
 
 # Installation
 
-Install the core runtime and the provider adapter you plan to use.
+Install the core runtime and the provider package you will use.
 
 ```bash
-npm install @shiro/core @shiro/openai
+npm install @shiro/core @shiro/openai zod
 ```
+
+`zod` is commonly used for tool `parameters` and structured `output` schemas because it exposes
+a `.parse()` method Shiro can call.
 
 ## Packages
 
-| Package | Purpose |
-| --- | --- |
-| `@shiro/core` | Engine, runner, tools, approvals, memory, tracing, and shared types. |
-| `@shiro/openai` | OpenAI provider adapter for Shiro's provider contract. |
-| `@shiro/studio` | Optional Studio UI for inspecting traces and approvals. |
+| Package         | Purpose                                                             |
+| --------------- | ------------------------------------------------------------------- |
+| `@shiro/core`   | Engine, runner, agents, tools, memory, sessions, tracing, approvals |
+| `@shiro/openai` | OpenAI provider + plugin (`OpenAIPlugin`, `OpenAIProvider`)         |
+| `@shiro/studio` | Studio app for inspecting runs and traces                           |
+| `@shiro/cli`    | Project scaffolding and local Studio launch                         |
 
 ## Environment
 
-Configure the provider outside your agent definitions. Keep credentials in environment variables
-or your platform's secret store.
+Keep credentials out of agent files.
 
 ```bash
-OPENAI_API_KEY=...
+export OPENAI_API_KEY=...
 ```
 
 ## Verify the install
 
-Create an engine, register a provider, and execute a small agent. If this run succeeds, the SDK
-is installed and the provider can be reached.
+This matches the pattern used in the repo’s basic example: create an engine, install the OpenAI
+plugin, define an agent with a provider id, execute once.
 
 ```ts
 import { Agent, Engine } from "@shiro/core";
-import { openai } from "@shiro/openai";
+import { OpenAIPlugin } from "@shiro/openai";
 
-const engine = new Engine({
-  providers: [openai({ model: "gpt-5" })],
-});
+const engine = new Engine();
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
 
 const agent = new Agent({
   name: "hello",
-  instructions: "Answer in one sentence.",
+  instructions: "Answer in one short sentence.",
+  provider: "openai",
 });
 
-await engine.execute(agent, "What is Shiro?");
+const result = await engine.execute(agent, "What does the Shiro engine own?");
+console.log(result.output);
 ```
+
+If this throws on missing API keys or provider registration, fix configuration before adding
+tools or Studio.
+
+## Scaffold with the CLI
+
+```bash
+npx @shiro/cli init my-agent
+cd my-agent
+npm run dev
+```
+
+`shiro init` creates a project. `shiro dev` runs diagnostics and launches [Studio](/docs/studio).
+See [CLI](/docs/cli).
 
 ## Common mistakes
 
-- Installing a provider package without registering it with the engine.
-- Reading secrets from agent files.
-- Creating a new engine for every request.
-- Calling the provider directly after adopting Shiro.
+- Installing `@shiro/openai` but never calling `engine.use(new OpenAIPlugin(...))`
+- Creating an agent without `provider`
+- Reading secrets from source files committed to git
+- Creating a new engine on every request — see [Engine](/docs/engine)
+
+## Next
+
+[Quick Start](/docs/quick-start) adds a tool and shows what the runner does with it.

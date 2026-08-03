@@ -1,40 +1,66 @@
 ---
 title: Execution Pipeline
-description: The ordered stages a Shiro run moves through.
+description: Ordered stages a run moves through — and why that order is fixed.
 ---
 
 # Execution Pipeline
 
-The pipeline is the path one run follows from input to final output. Not every run uses every
-stage, but every stage emits events when it is used.
+The pipeline is the path one run follows from input to output. Not every run uses every stage,
+but when a stage runs it should emit events you can see in [traces](/docs/tracing) and
+[Studio](/docs/studio).
 
 ## Stages
 
-1. create runner
-2. load session context
-3. retrieve memory
-4. call provider
-5. execute requested tools
-6. process handoffs
-7. pause for approvals
-8. validate structured output
-9. persist memory
-10. export trace
+```txt
+1. Engine creates Runner
+2. Load session context
+3. Retrieve memory
+4. Call provider
+5. Execute requested tools (approval may pause here)
+6. Process handoffs
+7. Repeat provider/tools as needed
+8. Validate structured output
+9. Persist memory
+10. Complete run + exportable trace events
+```
 
 ## Why order matters
 
-Memory must be loaded before the provider needs context. Approvals must happen before risky
-tools execute. Output validation must happen before another system consumes the result.
+| If you reorder…                        | What breaks                                             |
+| -------------------------------------- | ------------------------------------------------------- |
+| Memory after provider                  | Model answers without context you already paid to store |
+| Tools before approval                  | Side effects escape the gate                            |
+| Output validation after external write | Bad JSON already landed in your DB                      |
+| Handoff outside the runner             | Studio / traces miss the transfer                       |
+
+The [runner](/docs/runner) exists to keep this order honest.
+
+## Mapping to code
+
+| Stage             | You configure                                |
+| ----------------- | -------------------------------------------- |
+| Session load      | `execute(..., { sessionId })`                |
+| Tools             | `tool()` on the [agent](/docs/agents)        |
+| Approval          | `requiresApproval` on tools                  |
+| Handoff           | `handoff` strategy + `registerAgent`         |
+| Structured output | agent `output` schema                        |
+| Trace export      | `TraceManager` on the [engine](/docs/engine) |
 
 ## Best practices
 
-- Trace every stage that changes state.
-- Keep tools small so pipeline failures are easy to locate.
-- Do not skip approval for convenience in development.
-- Validate output before writing to external systems.
+- Trace every stage that mutates state
+- Keep tools small so failures pinpoint a stage
+- Do not disable approvals in “just this once” production paths
+- Validate output before dependent writes
 
 ## Common mistakes
 
-- Reading memory after the provider call.
-- Executing tools outside the runner.
-- Treating output validation as a UI concern.
+- Calling tools in application code between provider calls
+- Reading memory only in your route after `execute` returns
+- Treating validation as a UI concern
+
+## Related
+
+- [Architecture](/docs/architecture)
+- [Runner](/docs/runner)
+- [Studio](/docs/studio)

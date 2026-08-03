@@ -1,38 +1,66 @@
 ---
 title: Plugins
-description: Extend the engine lifecycle without reaching into runtime internals.
+description: Install providers and other engine capabilities through a stable lifecycle.
 ---
 
 # Plugins
 
-Plugins install behavior into the engine: providers, exporters, memory backends, approval
-services, or lifecycle subscribers.
+Plugins are how you install cross-cutting capabilities into the [engine](/docs/engine) without
+reaching into private fields. A plugin receives a public `PluginContext` and registers what it
+owns — usually a [provider](/docs/providers), sometimes exporters or other services.
 
 ## Why plugins exist
 
-The engine needs extension points, but direct access to internals makes upgrades fragile.
-Plugins receive a public context and register capabilities through stable APIs.
+The engine needs extension points. Direct mutation of internals makes upgrades fragile and
+makes it unclear what a process loaded at startup. Plugins declare metadata and capabilities,
+then register through stable APIs.
 
 ```ts
-const engine = new Engine({
-  plugins: [studioPlugin(), customTraceExporter()],
-});
+import { Engine } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
+
+const engine = new Engine();
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
 ```
+
+`engine.execute()` activates plugins as needed before creating a [runner](/docs/runner).
 
 ## When to write a plugin
 
-Write a plugin when behavior should be installed once and reused across many runs.
+Write a plugin when behavior should be installed **once** and reused across many runs:
 
-Good plugin candidates:
+- Provider adapters (`@shiro/openai`, future Anthropic/Gemini packages)
+- Trace exporters wired at process start
+- Memory or approval backends shared by all runs
+- Studio / observability integrations
 
-- trace exporters
-- provider bundles
-- memory backends
-- approval adapters
-- Studio integrations
+Do **not** write a plugin for request-specific logic. That belongs in tools, middleware, or
+session data.
+
+## Capabilities
+
+Plugins advertise capabilities (for example `PluginCapability.Provider`). That metadata is how
+tooling — including `shiro plugins` in the [CLI](/docs/cli) — discovers what is installed.
+
+## Best practices
+
+- Keep plugin `load` idempotent and side-effect light
+- Register providers; do not call them during `load`
+- Pass configuration into the plugin constructor, not globals
 
 ## Common mistakes
 
-- Mutating engine internals.
-- Registering request-specific state in a plugin.
-- Hiding provider calls inside plugin hooks.
+- Mutating engine private state
+- Storing the current user on a plugin instance
+- Hiding provider HTTP calls inside unrelated lifecycle hooks
+
+## Related
+
+- [Providers](/docs/providers)
+- [Engine](/docs/engine)
+- [Tracing](/docs/tracing)

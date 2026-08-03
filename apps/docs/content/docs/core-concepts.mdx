@@ -1,55 +1,110 @@
 ---
-title: Core Concepts
-description: The runtime objects that make a Shiro run inspectable.
+title: Mental Model
+description: The few runtime objects you need to keep straight before writing agents.
 ---
 
-# Core Concepts
+# Mental Model
 
-Shiro has a small set of runtime concepts. Each one owns a different part of execution.
+Shiro is easier to learn if you stop thinking in “chatbots” and start thinking in runtimes.
+There are only a handful of objects. Each owns a different lifetime and a different kind of
+state.
 
-## Engine
+## The short version
 
-The engine is the long-lived runtime service. It owns providers, plugins, registries, sessions,
-approval services, event buses, and trace exporters.
+| Concept                          | Lifetime            | Owns                                         | Does not own                |
+| -------------------------------- | ------------------- | -------------------------------------------- | --------------------------- |
+| [Engine](/docs/engine)           | Process / worker    | Shared services, registries, plugins         | Per-user conversation state |
+| [Runner](/docs/runner)           | One run             | Messages, tool calls, pauses, emitted events | Vendor SDKs                 |
+| [Agent](/docs/agents)            | Configuration       | Instructions, tools, output contract         | Request-specific memory     |
+| [Provider](/docs/providers)      | Adapter             | Model API translation                        | Approvals, Studio, handoffs |
+| [Tool](/docs/tools)              | One call            | A typed side effect                          | The execution loop          |
+| [Session](/docs/memory-sessions) | Conversation / user | Durable context across runs                  | Agent instructions          |
+| [Trace](/docs/tracing)           | Run history         | Structured observability                     | Application business logic  |
 
-Use it when you need a stable entrypoint for many runs.
+## Engine vs Runner
 
-## Runner
+This is the most important distinction in Shiro.
 
-The runner owns one run. It tracks messages, tool calls, handoffs, approvals, memory reads,
-validation attempts, and emitted events.
+```txt
+Engine (long-lived)
+  providers, plugins, registries, event bus, memory services
+        │
+        │  engine.execute(agent, input)
+        ▼
+Runner (one run)
+  messages → provider → tools → approvals → handoffs → output → events
+```
 
-Use it indirectly through `engine.execute()` or streaming APIs.
+Create the engine at startup. Reuse it. Let it create a runner per execution. If you create a
+new engine for every HTTP request, traces fragment and plugins re-initialize for no reason.
 
-## Agent
+See [Engine](/docs/engine) and [Runner](/docs/runner).
 
-An agent is a declarative unit of behavior: name, instructions, tools, handoffs, provider
-preferences, memory policy, and output shape.
+## Agent vs session
 
-Do not put per-user state on the agent.
+An agent answers: _what can this role do?_
+A session answers: _what do we already know about this conversation?_
 
-## Tool
+```ts
+const agent = new Agent({
+  name: "support",
+  instructions: "Resolve billing and account questions.",
+  provider: "openai",
+  tools: [lookupInvoice],
+});
 
-A tool is a typed side effect. The model may request it, but Shiro executes it.
+await engine.execute(agent, "Where is invoice INV-8821?", {
+  sessionId: "customer_48",
+});
+```
 
-Use tools for operations that need code: lookups, writes, calculations, workflow calls, or
-internal service requests.
+The same agent definition serves many users. The session carries user-specific history. Mixing
+those lifetimes is the fastest way to leak context across customers.
 
-## Provider
+See [Agents](/docs/agents) and [Memory & Sessions](/docs/memory-sessions).
 
-A provider adapts a model API to Shiro. Providers should not know about Studio, approvals,
-memory, or handoffs.
+## Provider vs tool
 
-## Trace
+The provider talks to a model. A tool talks to _your_ systems.
 
-A trace is a structured record of a run. It is the source of truth for debugging.
+The model may _request_ a tool. The runner _executes_ it. That is why tool calls show up in
+traces, can require approval, and can time out independently of the provider.
 
-## Comparison
+See [Providers](/docs/providers) and [Tools](/docs/tools).
 
-| Concept | Lifetime | Owns |
-| --- | --- | --- |
-| Engine | process | shared services |
-| Runner | one run | execution state |
-| Agent | configuration | behavior |
-| Tool | call | side effect |
-| Trace | run history | observability |
+## Trace vs logs
+
+A log line says something happened. A [trace](/docs/tracing) places that event in the run:
+which provider call led to which tool, whether an approval paused execution, which handoff
+changed the active agent, and what memory was loaded before the next model call.
+
+[Studio](/docs/studio) is a consumer of traces and events. It is not a second orchestrator.
+
+## How a run moves
+
+```txt
+input
+  → load session / memory
+  → provider call
+  → optional tool calls (and approvals)
+  → optional handoff
+  → more provider calls as needed
+  → validate structured output
+  → persist memory
+  → emit / export trace
+```
+
+Details live in [Execution Pipeline](/docs/execution-pipeline).
+
+## Common mistakes
+
+- Treating the agent as a mutable per-user object
+- Calling tools from application code and expecting Studio to see them
+- Calling the provider outside the runner after adopting Shiro
+- Using text logs instead of traces when a run goes wrong
+- Creating an engine per request
+
+## Next
+
+Read [Architecture](/docs/architecture) for the system view, then [Quick Start](/docs/quick-start)
+to execute your first run.

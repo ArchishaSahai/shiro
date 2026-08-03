@@ -1,53 +1,69 @@
 ---
 title: Introduction
-description: Learn the Shiro runtime model before wiring agents into an application.
+description: What Shiro is, why the runtime exists, and how to start learning it.
 ---
 
 # Shiro
 
-Shiro is a TypeScript runtime for agent execution. It owns the loop that decides when to call a
-provider, execute a tool, pause for approval, switch agents, read memory, validate output, and
-emit trace events.
+Shiro is a TypeScript runtime for agent execution. Your application defines agents, tools, and
+policies. Shiro owns the loop that decides when to call a provider, execute a tool, pause for
+approval, switch agents, read memory, validate output, and emit trace events.
 
-Your application defines the workflow. Shiro runs it.
+That split is the whole product. If the execution loop lives in your route handlers, every new
+concern — timeout, handoff, approval, memory, debugging — becomes another ad-hoc branch. Shiro
+keeps those transitions in one place so a run can be inspected and replayed.
 
-## What Shiro gives you
+## What Shiro owns
 
-- a long-lived `Engine` for shared runtime services
-- a per-run `Runner` for execution state
-- typed tools with lifecycle events
-- provider adapters behind one contract
-- sessions and memory for durable context
-- handoffs between agents
-- approval pauses for risky actions
-- structured output validation
-- traces that Studio and exporters can consume
-
-## Why it exists
-
-Most agent projects begin as a provider call and a tool function. The hard part comes later:
-timeouts, retries, handoffs, approvals, memory, debugging, and explaining what happened when a
-run fails. Shiro puts those concerns in the runtime instead of scattering them through API
-routes, queues, and one-off logging code.
+| Runtime piece               | Responsibility                                              |
+| --------------------------- | ----------------------------------------------------------- |
+| [Engine](/docs/engine)      | Long-lived services: providers, plugins, registries, events |
+| [Runner](/docs/runner)      | One execution and its state                                 |
+| [Agent](/docs/agents)       | Declarative behavior: instructions, tools, output contract  |
+| [Tool](/docs/tools)         | Typed side effect executed by the runner                    |
+| [Provider](/docs/providers) | Vendor adapter for model calls                              |
+| [Trace](/docs/tracing)      | Structured record of what the runner did                    |
 
 ## Mental model
 
 ```txt
-Engine -> Runner -> Provider -> Tools -> Approvals -> Memory -> Output -> Trace
+Engine  ──creates──►  Runner
+                        │
+                        ├─► Provider call
+                        ├─► Tool execution
+                        ├─► Approval pause
+                        ├─► Handoff
+                        ├─► Memory read / write
+                        ├─► Output validation
+                        └─► Trace / events ──► Studio
 ```
 
-The engine is long-lived. A runner is created for one execution. The trace records what the
-runner did.
+The [Engine](/docs/engine) is process-scoped. The [Runner](/docs/runner) is run-scoped. Agents
+are configuration, not executors. [Studio](/docs/studio) observes the same events the runtime
+emits; it does not orchestrate the run.
 
 ## When to use Shiro
 
-Use Shiro when your agent needs more than a single model call: tools, sessions, approval,
-handoffs, structured output, or run inspection.
+Use Shiro when a single provider call is not enough:
 
-If you only need a one-off completion, call the provider directly.
+- tools that must be timed, approved, or traced
+- sessions that span requests
+- handoffs between domain agents
+- structured output another system will consume
+- runs you expect to debug later
 
-## Next steps
+If you only need one completion with no tools or durable state, call the provider directly.
 
-Start with [Installation](/docs/installation), then build the first run in
-[Quick Start](/docs/quick-start). Read [Architecture](/docs/architecture) before adding memory,
-handoffs, or Studio.
+## How to read these docs
+
+1. [Installation](/docs/installation) and [Quick Start](/docs/quick-start) to run something
+2. [Mental Model](/docs/core-concepts) and [Architecture](/docs/architecture) to learn the shape
+3. Concept pages ([Engine](/docs/engine), [Runner](/docs/runner), [Tools](/docs/tools), …) when
+   you add that concern
+4. [Studio](/docs/studio) and [Tracing](/docs/tracing) when you need to see what happened
+5. [Examples](/docs/examples) for concrete workflow patterns
+
+## What these docs avoid
+
+Marketing adjectives. Every page should explain concrete behavior: what owns what, when to use
+it, and which mistakes waste the most time.

@@ -1,37 +1,92 @@
 ---
 title: Providers
-description: Adapt model APIs to Shiro without coupling vendors to the runtime.
+description: Thin adapters that translate Shiro requests into vendor model APIs.
 ---
 
 # Providers
 
-A provider turns a Shiro model request into a vendor API call. It should be small: accept
-messages and model options, return model output and tool requests, and report usage.
+A provider adapts a model vendor to Shiro’s request/response contract. It should stay small:
+accept messages and options, return text / tool requests / usage, and map vendor errors into
+Shiro errors.
+
+Everything else — tools, approvals, memory, Studio — stays outside the adapter.
 
 ## Why providers are isolated
 
-Provider APIs change. Runtime behavior should not. Shiro keeps vendor-specific code behind an
-adapter so tools, memory, approvals, handoffs, and Studio do not depend on one model SDK.
+Vendor APIs change. Runtime behavior should not. If tools or Studio imported OpenAI types
+directly, every SDK bump would ripple through the product. Providers absorb that churn.
 
-## Example
+```txt
+Agent (provider: "openai")
+        │
+        ▼
+Engine plugin registers OpenAIProvider
+        │
+        ▼
+Runner calls provider.generate / provider.stream
+```
+
+## Installing OpenAI
 
 ```ts
-const engine = new Engine({
-  providers: [openai({ model: "gpt-5" })],
+import { Engine } from "@shiro/core";
+import { OpenAIPlugin } from "@shiro/openai";
+
+const engine = new Engine();
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
+```
+
+`OpenAIPlugin` registers an `OpenAIProvider` under the id `"openai"`. Agents select it:
+
+```ts
+const agent = new Agent({
+  name: "support",
+  instructions: "...",
+  provider: "openai",
 });
 ```
 
+You can also pass a provider instance instead of a string id when you need a one-off
+configuration.
+
 ## What providers should not own
 
-- memory persistence
-- approval decisions
-- tool execution
+- Memory persistence
+- Approval decisions
+- Tool execution
 - Studio rendering
-- handoff policy
+- Handoff policy
+
+If you find those concerns inside a provider, they belong on the [engine](/docs/engine) /
+[runner](/docs/runner) instead. See [Plugins](/docs/plugins) for the install surface.
+
+## Streaming
+
+Providers may expose streaming at the adapter level (`provider.stream`). Application-facing
+“stream the whole run” is better modeled as **runtime events** (tool started, approval
+requested, run completed) via the engine event bus — that is what [Studio](/docs/studio)
+consumes. Do not assume provider token deltas are the only progress signal.
 
 ## Best practices
 
-- Keep provider configuration close to engine setup.
-- Record token usage and latency.
-- Normalize errors at the adapter boundary.
-- Avoid leaking vendor-specific response shapes into tools.
+- Configure providers at startup through plugins
+- Normalize errors at the adapter boundary
+- Record usage and latency for traces
+- Avoid leaking vendor-specific response objects into tools
+
+## Common mistakes
+
+- Calling the vendor SDK from a tool after adopting Shiro
+- Installing the package but forgetting `engine.use(new OpenAIPlugin(...))`
+- Selecting `provider: "openai"` when no plugin registered that id
+
+## Related
+
+- [Plugins](/docs/plugins)
+- [Engine](/docs/engine)
+- [Agents](/docs/agents)

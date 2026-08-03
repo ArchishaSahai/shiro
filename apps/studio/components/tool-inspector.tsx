@@ -27,11 +27,11 @@ export function ToolInspector({
       <CardHeader>
         <SectionHeading
           actions={
-            <span className="text-xs text-white/40 font-mono">
+            <span className="font-mono text-xs text-white/40">
               {String(trace.toolExecutions.length)} calls
             </span>
           }
-          description="Inspects tool input, serialized output, status, and execution time. Use it to debug tool behavior and model arguments."
+          description="Inspect tool input, output, status, and execution time."
           icon={Wrench}
         >
           Tool Inspector
@@ -41,7 +41,7 @@ export function ToolInspector({
         {tool === undefined ? (
           <EmptyState
             action="Select a trace with tool calls"
-            description="Tool arguments, outputs, status, and timings will appear here after a tool is invoked."
+            description="Tool arguments, outputs, status, and timings appear here."
             icon={Wrench}
             title="No tool execution"
           />
@@ -50,6 +50,7 @@ export function ToolInspector({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
             initial={{ opacity: 0, y: 8 }}
+            key={tool.toolName + tool.status}
             transition={{ duration: 0.2 }}
           >
             <div className="flex flex-col gap-3 rounded-2xl border border-white/[.08] bg-white/[.02] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -58,12 +59,20 @@ export function ToolInspector({
                   <Wrench aria-hidden="true" className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs uppercase text-white/40 font-mono">Tool</p>
+                  <p className="font-mono text-xs uppercase text-white/40">Tool</p>
                   <p className="truncate font-semibold text-white">{tool.toolName}</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Badge tone={tool.status === "completed" ? "success" : "danger"}>
+                <Badge
+                  tone={
+                    tool.status === "completed"
+                      ? "success"
+                      : tool.status === "running"
+                        ? "warning"
+                        : "danger"
+                  }
+                >
                   {tool.status}
                 </Badge>
                 <Badge>{formatDuration(tool.durationMs)}</Badge>
@@ -108,7 +117,7 @@ function Stat({
   return (
     <div className="rounded-2xl border border-white/[.08] bg-white/[.02] p-3">
       <Icon aria-hidden="true" className="mb-3 h-4 w-4 text-white/40" />
-      <p className="text-xs uppercase text-white/40 font-mono">{label}</p>
+      <p className="font-mono text-xs uppercase text-white/40">{label}</p>
       <p className="mt-1 truncate font-semibold text-white">{value}</p>
     </div>
   );
@@ -116,7 +125,7 @@ function Stat({
 
 function JsonPanel({ title, value }: { readonly title: string; readonly value: string }) {
   return (
-    <Terminal title={title.toLowerCase()} copyText={value}>
+    <Terminal copyText={value} title={title.toLowerCase()}>
       <ScrollArea className="max-h-72">
         <pre className="text-xs leading-relaxed text-white/90">
           <code>{value}</code>

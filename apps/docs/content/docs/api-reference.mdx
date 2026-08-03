@@ -1,71 +1,131 @@
 ---
 title: API Reference
-description: Public runtime APIs and the responsibility of each surface.
+description: Public surfaces you will use most — with links to the concept pages.
 ---
 
 # API Reference
 
-This page summarizes the public surfaces you will use most often. Use the concept pages for
-design guidance and this page when you need to check the shape of an API.
+This page is a map of public surfaces. Prefer the concept pages for _why_; use this page to
+check _what exists_.
 
 ## Engine
 
 ```ts
-new Engine(options)
-engine.execute(agent, input, options)
-engine.stream(agent, input, options)
+import { Engine } from "@shiro/core";
+
+const engine = new Engine({ events: traces /* optional services */ });
+engine.use(plugin);
+engine.registerAgent(agent);
+engine.start(); // usually implicit on first execute
+const result = await engine.execute(agent, input, options);
+engine.stop();
 ```
 
-The engine creates runs and owns shared services.
+| Member                              | Role                                                     |
+| ----------------------------------- | -------------------------------------------------------- |
+| `use(plugin)`                       | Install a [plugin](/docs/plugins)                        |
+| `registerAgent`                     | Make agents resolvable for [handoffs](/docs/multi-agent) |
+| `execute`                           | Create a [runner](/docs/runner) and run it               |
+| `createRunner`                      | Advanced: build a runner without executing yet           |
+| `providerRegistry` / `toolRegistry` | Shared registries                                        |
+
+→ [Engine](/docs/engine)
 
 ## Agent
 
 ```ts
+import { Agent } from "@shiro/core";
+
 new Agent({
-  name,
-  instructions,
-  tools,
-  handoffs,
-  output,
-})
+  name: "support",
+  instructions: "...",
+  provider: "openai", // required: id or Provider instance
+  tools: [...],
+  output: schema, // optional .parse()
+  handoff: strategy, // optional HandoffStrategy
+});
+
+Agent.builder().name("support").provider("openai").build();
 ```
 
-Agents describe behavior. They should not hold request-specific state.
+→ [Agents](/docs/agents)
 
 ## Tool
 
 ```ts
+import { tool } from "@shiro/core";
+
 tool({
-  name,
-  description,
-  requiresApproval,
-  execute,
-})
+  name: "lookupInvoice",
+  description: "...",
+  parameters: schema, // required, must implement .parse()
+  requiresApproval: true, // optional
+  execute: async (input, context) => result,
+});
 ```
 
-Tools are typed side effects executed by the runner.
+→ [Tools](/docs/tools)
 
-## Provider
+## Provider plugin (OpenAI)
 
 ```ts
-openai({ model: "gpt-5" })
+import { OpenAIPlugin } from "@shiro/openai";
+
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
 ```
 
-Providers adapt vendor model APIs to Shiro.
+→ [Providers](/docs/providers) · [Plugins](/docs/plugins)
 
-## Trace
+## Run options
+
+Passed as the third argument to `execute`:
+
+| Option          | Purpose                                            |
+| --------------- | -------------------------------------------------- |
+| `sessionId`     | Attach [session](/docs/memory-sessions) continuity |
+| `maxIterations` | Cap tool/provider loops                            |
+| `signal`        | Cancellation                                       |
+| `metadata`      | Run-level metadata for traces                      |
+
+## Tracing
 
 ```ts
-result.trace.export(options)
+import { JsonTraceExporter, TraceManager } from "@shiro/core";
+
+const traces = new TraceManager();
+const engine = new Engine({ events: traces });
+await engine.execute(agent, input);
+await traces.export(new JsonTraceExporter());
 ```
 
-Traces record provider calls, tools, handoffs, approvals, memory, timing, and output validation.
+→ [Tracing](/docs/tracing) · [Studio](/docs/studio)
 
-## Options
+## RunResult
 
-| Option | Use |
-| --- | --- |
-| `sessionId` | Attach durable context to a run. |
-| `modelTimeoutMs` | Bound provider latency. |
-| `toolTimeoutMs` | Bound tool latency. |
-| `output` | Validate final result shape. |
+```ts
+result.runId;
+result.output;
+result.messages;
+result.finishReason;
+result.context;
+```
+
+Observability is via the event / trace pipeline, not a hidden `result.trace` field.
+
+## Errors
+
+`ShiroError`, `ProviderError`, `ToolExecutionError`, `ValidationError`,
+`ApprovalRejectedError`, `ConfigurationError`, …
+
+→ [Error Handling](/docs/error-handling)
+
+## Related
+
+- [Mental Model](/docs/core-concepts)
+- [Examples](/docs/examples)
+- [CLI](/docs/cli)

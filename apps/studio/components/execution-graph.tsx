@@ -15,6 +15,7 @@ import { Boxes, BrainCircuit, Database, KeyRound, ShieldCheck } from "lucide-rea
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeading } from "@/components/ui/section-heading";
 import type { StudioRunTrace } from "@/lib/trace-utils";
 
@@ -23,6 +24,7 @@ interface StudioNodeData extends Record<string, unknown> {
   readonly kind: GraphNodeKind;
   readonly label: string;
   readonly meta?: string | undefined;
+  readonly active?: boolean | undefined;
 }
 type StudioNode = Node<StudioNodeData, "studio">;
 
@@ -33,12 +35,16 @@ const nodeTypes = {
 interface ExecutionGraphProps {
   readonly trace: StudioRunTrace;
   readonly onSelectTool: (toolName: string) => void;
+  readonly activeNodeIds?: readonly string[];
 }
 
-export function ExecutionGraph({ onSelectTool, trace }: ExecutionGraphProps) {
+export function ExecutionGraph({ activeNodeIds = [], onSelectTool, trace }: ExecutionGraphProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const nodes = useMemo(() => createNodes(trace, selectedNodeId), [selectedNodeId, trace]);
-  const edges = useMemo(() => createEdges(trace), [trace]);
+  const nodes = useMemo(
+    () => createNodes(trace, selectedNodeId, activeNodeIds),
+    [activeNodeIds, selectedNodeId, trace]
+  );
+  const edges = useMemo(() => createEdges(trace, activeNodeIds), [activeNodeIds, trace]);
 
   return (
     <Card className="min-h-[460px] overflow-hidden">
@@ -50,44 +56,54 @@ export function ExecutionGraph({ onSelectTool, trace }: ExecutionGraphProps) {
               <Badge>{String(edges.length)} edges</Badge>
             </div>
           }
-          description="Visualizes agent flow, provider calls, tools, approvals, memory, and handoffs. Use it to see how the run reached its answer."
+          description="Agent flow, provider calls, tools, approvals, memory, and handoffs."
           icon={BrainCircuit}
         >
           Execution Graph
         </SectionHeading>
       </CardHeader>
       <CardContent className="bg-black/25 p-0">
-        <motion.div
-          animate={{ opacity: 1 }}
-          className="h-[420px] w-full md:h-[480px]"
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-        >
-          <ReactFlow
-            edges={edges}
-            fitView
-            fitViewOptions={{ padding: 0.14 }}
-            nodes={nodes}
-            nodeTypes={nodeTypes}
-            onNodeClick={(_, node) => {
-              setSelectedNodeId(node.id);
-
-              if (node.id.startsWith("tool:")) {
-                onSelectTool(node.data.label);
-              }
-            }}
-          >
-            <Background color="rgba(255,255,255,.10)" gap={24} />
-            <MiniMap
-              maskColor="rgb(7 7 7 / 0.72)"
-              nodeBorderRadius={12}
-              nodeColor={(node) => nodeColor(readNodeKind(node))}
-              pannable
-              zoomable
+        {nodes.length === 0 ? (
+          <div className="p-5">
+            <EmptyState
+              action="Select a run"
+              description="The graph builds from the selected trace."
+              icon={BrainCircuit}
+              title="No graph yet"
             />
-            <Controls showInteractive={false} />
-          </ReactFlow>
-        </motion.div>
+          </div>
+        ) : (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="h-[420px] w-full md:h-[480px]"
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <ReactFlow
+              edges={edges}
+              fitView
+              fitViewOptions={{ padding: 0.14 }}
+              nodes={nodes}
+              nodeTypes={nodeTypes}
+              onNodeClick={(_, node) => {
+                setSelectedNodeId(node.id);
+                if (node.id.startsWith("tool:")) {
+                  onSelectTool(node.data.label);
+                }
+              }}
+            >
+              <Background color="rgba(255,255,255,.10)" gap={24} />
+              <MiniMap
+                maskColor="rgb(7 7 7 / 0.72)"
+                nodeBorderRadius={12}
+                nodeColor={(node) => nodeColor(readNodeKind(node))}
+                pannable
+                zoomable
+              />
+              <Controls showInteractive={false} />
+            </ReactFlow>
+          </motion.div>
+        )}
       </CardContent>
     </Card>
   );
@@ -100,15 +116,18 @@ function readNodeKind(node: Node): GraphNodeKind {
 
 function StudioGraphNode({ data, selected }: NodeProps<StudioNode>) {
   const Icon = iconForKind(data.kind);
+  const active = data.active === true;
 
-  // Status indicators for nodes
   const statusColor = () => {
+    if (active) {
+      return "bg-[#ff4fd8] animate-pulse";
+    }
     if (
       data.meta?.includes("completed") ||
-      data.meta?.includes("active") ||
-      data.meta?.includes("granted")
+      data.meta?.includes("granted") ||
+      data.meta?.includes("active")
     ) {
-      return "bg-emerald-400";
+      return "bg-white";
     }
     if (data.meta?.includes("failed") || data.meta?.includes("rejected")) {
       return "bg-red-400";
@@ -121,11 +140,13 @@ function StudioGraphNode({ data, selected }: NodeProps<StudioNode>) {
 
   return (
     <motion.div
+      animate={active ? { scale: 1.03 } : { scale: 1 }}
       className={`min-w-44 rounded-xl border bg-[#0b0b0d] px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,.5)] transition-all duration-200 ${
-        selected
-          ? "border-[#ff4fd8] shadow-[0_0_20px_rgba(255,79,216,.15)]"
-          : "border-white/[.08] hover:border-white/[.16] hover:shadow-[0_0_18px_rgba(255,79,216,.04)]"
+        selected || active
+          ? "border-[#ff4fd8] shadow-[0_0_20px_rgba(255,79,216,.12)]"
+          : "border-white/[.08] hover:border-white/[.16]"
       }`}
+      transition={{ type: "spring", stiffness: 320, damping: 24 }}
       whileHover={{ y: -2 }}
     >
       <div className="flex items-center gap-3">
@@ -137,9 +158,9 @@ function StudioGraphNode({ data, selected }: NodeProps<StudioNode>) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1.5">
             <p className="truncate text-xs font-semibold text-white">{data.label}</p>
-            <span className={`h-2 w-2 rounded-full shrink-0 ${statusColor()}`} />
+            <span className={`h-2 w-2 shrink-0 rounded-full ${statusColor()}`} />
           </div>
-          <p className="mt-0.5 truncate text-[10px] font-mono capitalize text-white/40">
+          <p className="mt-0.5 truncate font-mono text-[10px] capitalize text-white/40">
             {data.meta ?? data.kind}
           </p>
         </div>
@@ -148,7 +169,11 @@ function StudioGraphNode({ data, selected }: NodeProps<StudioNode>) {
   );
 }
 
-function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): StudioNode[] {
+function createNodes(
+  trace: StudioRunTrace,
+  selectedNodeId: string | null,
+  activeNodeIds: readonly string[]
+): StudioNode[] {
   const agents = [
     trace.agentName ?? "Manager",
     ...trace.handoffs.flatMap((handoff) => [handoff.sourceAgent, handoff.destinationAgent]),
@@ -159,6 +184,7 @@ function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): Stud
   return [
     ...uniqueAgents.map((agent, index) =>
       createNode({
+        active: activeNodeIds.includes(`agent:${agent}`),
         id: `agent:${agent}`,
         kind: "agent",
         label: agent,
@@ -170,6 +196,7 @@ function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): Stud
     ),
     ...trace.modelCalls.map((call, index) =>
       createNode({
+        active: activeNodeIds.includes(`provider:${String(index)}`),
         id: `provider:${String(index)}`,
         kind: "provider",
         label: call.providerName,
@@ -181,6 +208,7 @@ function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): Stud
     ),
     ...trace.toolExecutions.map((tool, index) =>
       createNode({
+        active: activeNodeIds.includes(`tool:${tool.toolName}`),
         id: `tool:${tool.toolName}`,
         kind: "tool",
         label: tool.toolName,
@@ -192,6 +220,7 @@ function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): Stud
     ),
     ...trace.approvals.map((approval, index) =>
       createNode({
+        active: activeNodeIds.includes(`approval:${approval.toolName}:0`),
         id: `approval:${approval.toolName}:${String(index)}`,
         kind: "approval",
         label: approval.toolName,
@@ -203,6 +232,7 @@ function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): Stud
     ),
     ...trace.memory.map((entry, index) =>
       createNode({
+        active: activeNodeIds.some((id) => id.startsWith("memory:")),
         id: `memory:${entry.kind}:${String(index)}`,
         kind: "memory",
         label: entry.kind,
@@ -216,6 +246,7 @@ function createNodes(trace: StudioRunTrace, selectedNodeId: string | null): Stud
 }
 
 function createNode({
+  active,
   id,
   kind,
   label,
@@ -224,6 +255,7 @@ function createNode({
   x,
   y,
 }: {
+  readonly active: boolean;
   readonly id: string;
   readonly kind: GraphNodeKind;
   readonly label: string;
@@ -233,7 +265,7 @@ function createNode({
   readonly y: number;
 }): StudioNode {
   return {
-    data: { kind, label, meta },
+    data: { active, kind, label, meta },
     id,
     position: { x, y },
     selected,
@@ -241,52 +273,59 @@ function createNode({
   };
 }
 
-function createEdges(trace: StudioRunTrace): Edge[] {
+function createEdges(trace: StudioRunTrace, activeNodeIds: readonly string[]): Edge[] {
   const edges: Edge[] = [];
   const root = `agent:${trace.agentName ?? "Manager"}`;
 
-  for (const [index, call] of trace.modelCalls.entries()) {
-    edges.push(createEdge(root, `provider:${String(index)}`, call.model ?? "provider"));
+  for (const [index] of trace.modelCalls.entries()) {
+    edges.push(createEdge(root, `provider:${String(index)}`, "provider", activeNodeIds));
   }
-
   for (const tool of trace.toolExecutions) {
-    edges.push(createEdge(root, `tool:${tool.toolName}`, "tool"));
+    edges.push(createEdge(root, `tool:${tool.toolName}`, "tool", activeNodeIds));
   }
-
   for (const handoff of trace.handoffs) {
     edges.push(
-      createEdge(`agent:${handoff.sourceAgent}`, `agent:${handoff.destinationAgent}`, "handoff")
+      createEdge(
+        `agent:${handoff.sourceAgent}`,
+        `agent:${handoff.destinationAgent}`,
+        "handoff",
+        activeNodeIds
+      )
     );
   }
-
   for (const [index, approval] of trace.approvals.entries()) {
     edges.push(
       createEdge(
         `tool:${approval.toolName}`,
         `approval:${approval.toolName}:${String(index)}`,
-        "approval"
+        "approval",
+        activeNodeIds
       )
     );
   }
-
   for (const [index, memory] of trace.memory.entries()) {
-    edges.push(createEdge(root, `memory:${memory.kind}:${String(index)}`, "memory"));
+    edges.push(createEdge(root, `memory:${memory.kind}:${String(index)}`, "memory", activeNodeIds));
   }
 
   return edges;
 }
 
-function createEdge(source: string, target: string, label: string): Edge {
+function createEdge(
+  source: string,
+  target: string,
+  label: string,
+  activeNodeIds: readonly string[]
+): Edge {
+  const active = activeNodeIds.includes(source) || activeNodeIds.includes(target);
   return {
+    animated: active,
     id: `${source}->${target}`,
-    animated: true,
     label,
     markerEnd: { type: MarkerType.ArrowClosed },
     source,
     style: {
-      filter: "drop-shadow(0 0 6px rgba(255,79,216,.20))",
-      stroke: "#ff4fd8",
-      strokeWidth: 1.4,
+      stroke: active ? "#ff4fd8" : "rgba(255,255,255,0.18)",
+      strokeWidth: active ? 1.6 : 1.2,
     },
     target,
     type: "smoothstep",
@@ -301,20 +340,12 @@ function iconForKind(kind: GraphNodeKind) {
     provider: KeyRound,
     tool: Boxes,
   };
-
   return icons[kind];
 }
 
 function nodeAccent(kind: GraphNodeKind): string {
-  const classes = {
-    agent: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
-    approval: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
-    memory: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
-    provider: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
-    tool: "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]",
-  };
-
-  return classes[kind];
+  void kind;
+  return "bg-white/[.04] text-white/90 ring-1 ring-white/[.08]";
 }
 
 function nodeColor(kind: GraphNodeKind): string {
@@ -325,6 +356,5 @@ function nodeColor(kind: GraphNodeKind): string {
     provider: "#444444",
     tool: "#ffffff",
   };
-
   return colors[kind];
 }

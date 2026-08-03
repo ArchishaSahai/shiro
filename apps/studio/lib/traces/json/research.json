@@ -1,0 +1,249 @@
+{
+  "aliases": ["research-agent", "examples/research", "traces/research"],
+  "agentName": "Research Lead",
+  "command": "shiro run research-agent",
+  "description": "Gather market evidence and produce a competitive summary.",
+  "events": [
+    {
+      "id": "run_market_research_19aa_run.started_0",
+      "offsetMs": 0,
+      "runId": "run_market_research_19aa",
+      "type": "run.started",
+      "message": "$ shiro run research-agent",
+      "terminalKind": "command"
+    },
+    {
+      "id": "run_market_research_19aa_engine.started_1",
+      "offsetMs": 120,
+      "runId": "run_market_research_19aa",
+      "type": "engine.started",
+      "message": "✓ Engine started",
+      "terminalKind": "success",
+      "payload": {
+        "agentName": "Research Lead",
+        "model": "gemini-2.5-pro",
+        "provider": "gemini",
+        "sessionId": "session_research"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_provider.loading_2",
+      "offsetMs": 300,
+      "runId": "run_market_research_19aa",
+      "type": "provider.loading",
+      "message": "→ Loading providers...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_market_research_19aa_provider.connected_3",
+      "offsetMs": 520,
+      "runId": "run_market_research_19aa",
+      "type": "provider.connected",
+      "message": "✓ Gemini connected",
+      "terminalKind": "success",
+      "payload": {
+        "model": "gemini-2.5-pro",
+        "provider": "gemini"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_runner.creating_4",
+      "offsetMs": 680,
+      "runId": "run_market_research_19aa",
+      "type": "runner.creating",
+      "message": "→ Creating runner...",
+      "terminalKind": "event"
+    },
+    {
+      "id": "run_market_research_19aa_memory.retrieved_5",
+      "offsetMs": 820,
+      "runId": "run_market_research_19aa",
+      "type": "memory.retrieved",
+      "message": "→ Memory retrieve prior briefs",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "retrieved",
+        "recordCount": 6,
+        "sessionId": "session_research"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_agent.calling_6",
+      "offsetMs": 980,
+      "runId": "run_market_research_19aa",
+      "type": "agent.calling",
+      "message": "→ Calling research agent...",
+      "terminalKind": "event",
+      "payload": {
+        "agentName": "Research Lead"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_provider.call.started_7",
+      "offsetMs": 1120,
+      "runId": "run_market_research_19aa",
+      "type": "provider.call.started",
+      "message": "→ Provider call gemini-2.5-pro",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gemini-2.5-pro",
+        "provider": "gemini",
+        "spanId": "provider:0"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_provider.call.completed_8",
+      "offsetMs": 1580,
+      "runId": "run_market_research_19aa",
+      "type": "provider.call.completed",
+      "message": "✓ Provider responded (460ms)",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 460,
+        "finishReason": "tool_calls",
+        "inputTokens": 900,
+        "latencyMs": 460,
+        "outputTokens": 80,
+        "spanId": "provider:0",
+        "totalTokens": 980
+      }
+    },
+    {
+      "id": "run_market_research_19aa_tool.started_9",
+      "offsetMs": 1720,
+      "runId": "run_market_research_19aa",
+      "type": "tool.started",
+      "message": "→ Tool web-research()",
+      "terminalKind": "event",
+      "payload": {
+        "arguments": {
+          "query": "agent observability"
+        },
+        "spanId": "tool:web-research",
+        "toolName": "web-research"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_tool.completed_10",
+      "offsetMs": 2280,
+      "runId": "run_market_research_19aa",
+      "type": "tool.completed",
+      "message": "✓ 8 sources collected",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 560,
+        "result": {
+          "sources": 8
+        },
+        "spanId": "tool:web-research",
+        "status": "completed",
+        "toolName": "web-research"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_handoff.started_11",
+      "offsetMs": 2440,
+      "runId": "run_market_research_19aa",
+      "type": "handoff.started",
+      "message": "→ Handoff → market analyst",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Market Analyst",
+        "reason": "Gather market evidence.",
+        "sourceAgent": "Research Lead",
+        "spanId": "handoff:Research Lead:Market Analyst"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_handoff.completed_12",
+      "offsetMs": 2680,
+      "runId": "run_market_research_19aa",
+      "type": "handoff.completed",
+      "message": "✓ Handoff complete",
+      "terminalKind": "pink",
+      "payload": {
+        "destinationAgent": "Market Analyst",
+        "durationMs": 240,
+        "reason": "Gather market evidence.",
+        "sourceAgent": "Research Lead",
+        "spanId": "handoff:Research Lead:Market Analyst"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_memory.compacted_13",
+      "offsetMs": 2840,
+      "runId": "run_market_research_19aa",
+      "type": "memory.compacted",
+      "message": "→ Memory compact session",
+      "terminalKind": "event",
+      "payload": {
+        "kind": "compacted",
+        "messageCount": 22,
+        "sessionId": "session_research"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_provider.call.started_14",
+      "offsetMs": 3000,
+      "runId": "run_market_research_19aa",
+      "type": "provider.call.started",
+      "message": "→ Provider call gemini-2.5-pro",
+      "terminalKind": "event",
+      "payload": {
+        "model": "gemini-2.5-pro",
+        "provider": "gemini",
+        "spanId": "provider:1"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_provider.call.completed_15",
+      "offsetMs": 3520,
+      "runId": "run_market_research_19aa",
+      "type": "provider.call.completed",
+      "message": "✓ Brief drafted",
+      "terminalKind": "success",
+      "payload": {
+        "durationMs": 520,
+        "estimatedCost": 0.014,
+        "finishReason": "completed",
+        "inputTokens": 1500,
+        "latencyMs": 520,
+        "outputTokens": 410,
+        "spanId": "provider:1",
+        "totalTokens": 1910
+      }
+    },
+    {
+      "id": "run_market_research_19aa_response.completed_16",
+      "offsetMs": 3660,
+      "runId": "run_market_research_19aa",
+      "type": "response.completed",
+      "message": "Assistant response",
+      "terminalKind": "markdown",
+      "payload": {
+        "finalOutput": "# Agent observability market signals\n\nThree verified signals for the competitive brief:\n\n1. **Runtime-first DX** — tools that treat traces as the primary surface are winning adoption\n2. **Terminal as control plane** — CLI-native workflows outperform dashboard-only products\n3. **Live multi-panel sync** — teams expect timeline, graph, and tools to update mid-run\n\n## Evidence table\n\n| Source | Signal | Confidence |\n| --- | --- | --- |\n| Web research | 8 sources reviewed | High |\n| Vendor blogs | Runtime UX emphasis | Medium |\n| Community threads | CLI preference | High |\n\n```ts\nconst brief = await research.summarize({\n  query: \"agent observability\",\n  sources: 8,\n});\n```\n\n> Compacted older session turns before drafting the final summary.\n",
+        "markdown": "# Agent observability market signals\n\nThree verified signals for the competitive brief:\n\n1. **Runtime-first DX** — tools that treat traces as the primary surface are winning adoption\n2. **Terminal as control plane** — CLI-native workflows outperform dashboard-only products\n3. **Live multi-panel sync** — teams expect timeline, graph, and tools to update mid-run\n\n## Evidence table\n\n| Source | Signal | Confidence |\n| --- | --- | --- |\n| Web research | 8 sources reviewed | High |\n| Vendor blogs | Runtime UX emphasis | Medium |\n| Community threads | CLI preference | High |\n\n```ts\nconst brief = await research.summarize({\n  query: \"agent observability\",\n  sources: 8,\n});\n```\n\n> Compacted older session turns before drafting the final summary.\n"
+      }
+    },
+    {
+      "id": "run_market_research_19aa_run.completed_17",
+      "offsetMs": 3780,
+      "runId": "run_market_research_19aa",
+      "type": "run.completed",
+      "message": "✓ Run completed (2.0s)",
+      "terminalKind": "success",
+      "payload": {
+        "estimatedCost": 0.014,
+        "finalOutput": "# Agent observability market signals\n\nThree verified signals for the competitive brief:\n\n1. **Runtime-first DX** — tools that treat traces as the primary surface are winning adoption\n2. **Terminal as control plane** — CLI-native workflows outperform dashboard-only products\n3. **Live multi-panel sync** — teams expect timeline, graph, and tools to update mid-run\n\n## Evidence table\n\n| Source | Signal | Confidence |\n| --- | --- | --- |\n| Web research | 8 sources reviewed | High |\n| Vendor blogs | Runtime UX emphasis | Medium |\n| Community threads | CLI preference | High |\n\n```ts\nconst brief = await research.summarize({\n  query: \"agent observability\",\n  sources: 8,\n});\n```\n\n> Compacted older session turns before drafting the final summary.\n",
+        "finalStatus": "completed",
+        "markdown": "# Agent observability market signals\n\nThree verified signals for the competitive brief:\n\n1. **Runtime-first DX** — tools that treat traces as the primary surface are winning adoption\n2. **Terminal as control plane** — CLI-native workflows outperform dashboard-only products\n3. **Live multi-panel sync** — teams expect timeline, graph, and tools to update mid-run\n\n## Evidence table\n\n| Source | Signal | Confidence |\n| --- | --- | --- |\n| Web research | 8 sources reviewed | High |\n| Vendor blogs | Runtime UX emphasis | Medium |\n| Community threads | CLI preference | High |\n\n```ts\nconst brief = await research.summarize({\n  query: \"agent observability\",\n  sources: 8,\n});\n```\n\n> Compacted older session turns before drafting the final summary.\n",
+        "totalTokens": 2890
+      }
+    }
+  ],
+  "id": "research",
+  "model": "gemini-2.5-pro",
+  "provider": "gemini",
+  "sessionId": "session_research",
+  "title": "Research Lead"
+}
