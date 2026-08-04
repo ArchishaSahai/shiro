@@ -36,6 +36,8 @@ interface RuntimeContextValue {
   readonly speed: number;
   readonly setSpeed: (speed: number) => void;
   readonly error: string | null;
+  readonly executePrompt: (prompt: string) => Promise<void>;
+  readonly transportConnected: boolean;
 }
 
 const RuntimeContext = createContext<RuntimeContextValue | null>(null);
@@ -53,6 +55,7 @@ export function RuntimeProvider({
   const transportRef = useRef<EventTransport>(transport ?? new WebSocketEventTransport());
   const [mode, setMode] = useState<ConnectionMode>("demo");
   const [agentsConnected, setAgentsConnected] = useState(0);
+  const [transportConnected, setTransportConnected] = useState(false);
   // Keep initial state deterministic for SSR/hydration — seed demo in useEffect only.
   // Seeding with `new Date()` here caused timestamp hydration mismatches.
   const [status, setStatus] = useState<RuntimeStatus>("idle");
@@ -300,7 +303,9 @@ export function RuntimeProvider({
   useEffect(() => {
     const transport = transportRef.current;
     transport.connect();
+    setTransportConnected(transport.connected);
     const unsubscribe = transport.subscribe((message) => {
+      setTransportConnected(transport.connected);
       if (message.type === "status") {
         const nextMode = message.mode;
         setMode(nextMode);
@@ -399,6 +404,8 @@ export function RuntimeProvider({
       status,
       stop,
       submitCommand,
+      executePrompt: submitLivePrompt,
+      transportConnected,
     }),
     [
       activeTrace,
@@ -414,6 +421,8 @@ export function RuntimeProvider({
       status,
       stop,
       submitCommand,
+      submitLivePrompt,
+      transportConnected,
     ]
   );
 

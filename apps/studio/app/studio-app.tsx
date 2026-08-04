@@ -15,5 +15,8 @@ const StudioDashboard = dynamic(
 );
 
 export function StudioApp() {
+  if (process.env.NODE_ENV !== "test") {
+    console.info("[shiro:studio]", "Studio loaded");
+  }
   return <StudioDashboard />;
 }

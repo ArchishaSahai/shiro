@@ -1,6 +1,6 @@
 {
   "name": "@shiro-sdk/openai",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "OpenAI provider plugin for Shiro.",
   "license": "MIT",
   "type": "module",

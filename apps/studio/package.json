@@ -1,6 +1,6 @@
 {
   "name": "@shiro-sdk/studio",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Studio application for inspecting Shiro runs and traces.",
   "license": "MIT",
   "type": "module",

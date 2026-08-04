@@ -15,6 +15,7 @@ coverage/
 
 # Accidental local scaffolds / pack output (never commit)
 travel-agent/
+shiro-rc-test/
 packages/*/package/
 *.tgz
 package/

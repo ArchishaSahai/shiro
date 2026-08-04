@@ -11,11 +11,15 @@ import {
   GitBranch,
   KeyRound,
   MemoryStick,
+  MessageSquare,
   Search,
   Timer,
   Workflow,
+  type LucideIcon,
 } from "lucide-react";
 import { ApprovalCenter } from "@/components/approval-center";
+import { ChatPanel } from "@/components/chat/ChatPanel";
+import { ChatProvider } from "@/components/chat/hooks/use-chat-session";
 import { ExecutionLog } from "@/components/execution-log";
 import { ExecutionGraph } from "@/components/execution-graph";
 import { LiveTimeline } from "@/components/live-timeline";
@@ -35,13 +39,13 @@ import {
   type StudioRunTrace,
   type StudioTraceSnapshot,
 } from "@/lib/trace-utils";
-import type { LucideIcon } from "lucide-react";
 
 const sidebarItems: readonly {
   readonly label: string;
   readonly icon: LucideIcon;
   readonly targetId: string;
 }[] = [
+  { label: "Chat", icon: MessageSquare, targetId: "chat-section" },
   { label: "Sessions", icon: Database, targetId: "memory-section" },
   { label: "Runs", icon: Activity, targetId: "runs-section" },
   { label: "Tracing", icon: GitBranch, targetId: "trace-section" },
@@ -67,7 +71,9 @@ const EMPTY_TRACE: StudioRunTrace = Object.freeze({
 export function StudioDashboard() {
   return (
     <RuntimeProvider>
-      <StudioDashboardInner />
+      <ChatProvider>
+        <StudioDashboardInner />
+      </ChatProvider>
     </RuntimeProvider>
   );
 }
@@ -144,7 +150,7 @@ function StudioDashboardInner() {
           </nav>
         </aside>
 
-        <div className="min-w-0">
+        <div className="flex min-h-screen min-w-0 flex-col">
           <header className="border-b border-white/[.08] bg-[#070707]/90 backdrop-blur">
             <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="min-w-0">
@@ -173,15 +179,17 @@ function StudioDashboardInner() {
                     event.preventDefault();
                     const target = resolveSearchTarget(searchQuery, selectedTrace);
                     setActiveItem(
-                      target === "tool-section"
-                        ? "Providers"
-                        : target === "trace-section"
-                          ? "Tracing"
-                          : target === "memory-section"
-                            ? "Memory"
-                            : target === "approvals-section"
-                              ? "Approvals"
-                              : "Runs"
+                      target === "chat-section"
+                        ? "Chat"
+                        : target === "tool-section"
+                          ? "Providers"
+                          : target === "trace-section"
+                            ? "Tracing"
+                            : target === "memory-section"
+                              ? "Memory"
+                              : target === "approvals-section"
+                                ? "Approvals"
+                                : "Runs"
                     );
                     document.getElementById(target)?.scrollIntoView({
                       behavior: "smooth",
@@ -210,129 +218,138 @@ function StudioDashboardInner() {
             </div>
           </header>
 
-          <div className="mx-auto max-w-[1500px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-[#ff4fd8]">
-                  Runtime debugger
-                </p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  Execution observability
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/52">
-                  Type prompts in the terminal. Live Mode streams SDK events; Demo Mode replays
-                  built-in traces when no agent is connected.
-                </p>
-              </div>
-            </div>
-
-            <section className="scroll-mt-6" id="terminal-section">
-              <StudioTerminal />
-            </section>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <MetricCard
-                icon={Activity}
-                label="Runs"
-                numericValue={snapshot.statistics.totalRuns}
-                trend={`${String(snapshot.statistics.completedRuns)} completed`}
-                value={String(snapshot.statistics.totalRuns)}
-              />
-              <MetricCard
-                accent="pink"
-                icon={Boxes}
-                label="Tokens"
-                numericValue={totalTokens(selectedTrace)}
-                trend="current run"
-                value={String(totalTokens(selectedTrace) ?? "—")}
-              />
-              <MetricCard
-                accent="amber"
-                icon={Timer}
-                label="Provider latency"
-                trend={`${String(selectedTrace.modelCalls.length)} calls`}
-                value={formatDuration(providerLatency(selectedTrace))}
-              />
-              <MetricCard
-                accent="green"
-                icon={Workflow}
-                label="Tool time"
-                trend={`${String(selectedTrace.toolExecutions.length)} tools`}
-                value={formatDuration(toolLatency(selectedTrace))}
-              />
-              <MetricCard
-                accent="neutral"
-                icon={ArrowRightLeft}
-                label="Handoffs"
-                numericValue={selectedTrace.handoffs.length}
-                trend={`${String(selectedTrace.totalIterations)} iterations`}
-                value={String(selectedTrace.handoffs.length)}
-              />
-            </div>
-
-            {error === null ? null : (
-              <div
-                className="flex items-start gap-3 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100"
-                role="alert"
-              >
-                <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-red-200" />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-[1500px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <p className="font-medium">Runtime error</p>
-                  <p className="mt-0.5 text-red-100/75">{error}</p>
+                  <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-[#ff4fd8]">
+                    Runtime debugger
+                  </p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                    Chat + execution observability
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/52">
+                    Talk to your agent in Chat while Timeline, Graph, Memory, and Tools update from
+                    the same live run. Demo Mode still replays traces when no agent is connected.
+                  </p>
                 </div>
               </div>
-            )}
 
-            <div className="grid gap-6">
-              <section
-                className="scroll-mt-6 grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]"
-                id="runs-section"
-              >
-                <RunExplorer
-                  onQueryChange={handleSearchChange}
-                  onSelectRun={() => undefined}
-                  query={searchQuery}
-                  selectedRunId={selectedTrace.runId}
-                  snapshot={snapshot}
+              <section className="scroll-mt-6" id="terminal-section">
+                <StudioTerminal />
+              </section>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <MetricCard
+                  icon={Activity}
+                  label="Runs"
+                  numericValue={snapshot.statistics.totalRuns}
+                  trend={`${String(snapshot.statistics.completedRuns)} completed`}
+                  value={String(snapshot.statistics.totalRuns)}
                 />
-                <div id="metrics-section">
-                  <MetricsDashboard trace={selectedTrace} />
-                </div>
-              </section>
-
-              <div className="scroll-mt-6" id="log-section">
-                <ExecutionLog trace={selectedTrace} />
+                <MetricCard
+                  accent="pink"
+                  icon={Boxes}
+                  label="Tokens"
+                  numericValue={totalTokens(selectedTrace)}
+                  trend="current run"
+                  value={String(totalTokens(selectedTrace) ?? "—")}
+                />
+                <MetricCard
+                  accent="amber"
+                  icon={Timer}
+                  label="Provider latency"
+                  trend={`${String(selectedTrace.modelCalls.length)} calls`}
+                  value={formatDuration(providerLatency(selectedTrace))}
+                />
+                <MetricCard
+                  accent="green"
+                  icon={Workflow}
+                  label="Tool time"
+                  trend={`${String(selectedTrace.toolExecutions.length)} tools`}
+                  value={formatDuration(toolLatency(selectedTrace))}
+                />
+                <MetricCard
+                  accent="neutral"
+                  icon={ArrowRightLeft}
+                  label="Handoffs"
+                  numericValue={selectedTrace.handoffs.length}
+                  trend={`${String(selectedTrace.totalIterations)} iterations`}
+                  value={String(selectedTrace.handoffs.length)}
+                />
               </div>
 
-              <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-                <div className="scroll-mt-6" id="timeline-section">
-                  <LiveTimeline trace={selectedTrace} />
-                </div>
-                <div className="scroll-mt-6 h-full" id="graph-section">
-                  <ExecutionGraph
-                    activeNodeIds={live.activeNodeIds}
-                    onSelectTool={selectTool}
-                    trace={selectedTrace}
+              {error === null ? null : (
+                <div
+                  className="flex items-start gap-3 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100"
+                  role="alert"
+                >
+                  <CircleAlert
+                    aria-hidden="true"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-red-200"
                   />
+                  <div>
+                    <p className="font-medium">Runtime error</p>
+                    <p className="mt-0.5 text-red-100/75">{error}</p>
+                  </div>
                 </div>
-              </section>
+              )}
 
-              <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-                <div className="scroll-mt-6" id="tool-section">
-                  <ToolInspector selectedTool={selectedTool} trace={selectedTrace} />
-                </div>
-                <div className="scroll-mt-6" id="approvals-section">
-                  <ApprovalCenter trace={selectedTrace} />
-                </div>
-              </section>
+              <div className="grid gap-6">
+                <section
+                  className="scroll-mt-6 grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]"
+                  id="runs-section"
+                >
+                  <RunExplorer
+                    onQueryChange={handleSearchChange}
+                    onSelectRun={() => undefined}
+                    query={searchQuery}
+                    selectedRunId={selectedTrace.runId}
+                    snapshot={snapshot}
+                  />
+                  <div id="metrics-section">
+                    <MetricsDashboard trace={selectedTrace} />
+                  </div>
+                </section>
 
-              <div className="scroll-mt-6" id="memory-section">
-                <MemorySessionExplorer trace={selectedTrace} />
-              </div>
-              <div className="scroll-mt-6" id="trace-section">
-                <TraceViewer trace={selectedTrace} />
+                <div className="scroll-mt-6" id="log-section">
+                  <ExecutionLog trace={selectedTrace} />
+                </div>
+
+                <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+                  <div className="scroll-mt-6" id="timeline-section">
+                    <LiveTimeline trace={selectedTrace} />
+                  </div>
+                  <div className="scroll-mt-6 h-full" id="graph-section">
+                    <ExecutionGraph
+                      activeNodeIds={live.activeNodeIds}
+                      onSelectTool={selectTool}
+                      trace={selectedTrace}
+                    />
+                  </div>
+                </section>
+
+                <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+                  <div className="scroll-mt-6" id="tool-section">
+                    <ToolInspector selectedTool={selectedTool} trace={selectedTrace} />
+                  </div>
+                  <div className="scroll-mt-6" id="approvals-section">
+                    <ApprovalCenter trace={selectedTrace} />
+                  </div>
+                </section>
+
+                <div className="scroll-mt-6" id="memory-section">
+                  <MemorySessionExplorer trace={selectedTrace} />
+                </div>
+                <div className="scroll-mt-6" id="trace-section">
+                  <TraceViewer trace={selectedTrace} />
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="sticky bottom-0 z-10 shrink-0">
+            <ChatPanel />
           </div>
         </div>
       </div>
@@ -363,6 +380,14 @@ function resolveSearchTarget(query: string, trace: StudioRunTrace): string {
   const normalized = query.trim().toLowerCase();
   if (normalized.length === 0) {
     return "runs-section";
+  }
+
+  if (
+    normalized.includes("chat") ||
+    normalized.includes("message") ||
+    normalized.includes("prompt")
+  ) {
+    return "chat-section";
   }
 
   if (

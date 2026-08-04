@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  NPM Package: <a href="https://www.npmjs.com/package/@shiro-sdk/core">https://www.npmjs.com/package/@shiro-sdk/core</a>
+</p>
+
+<p align="center">
   <a href="https://www.npmjs.com/package/@shiro-sdk/core"><img alt="npm" src="https://img.shields.io/npm/v/@shiro-sdk/core?color=111111&label=@shiro-sdk/core"></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-111111.svg"></a>
   <a href="https://github.com/ArchishaSahai/shiro/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ArchishaSahai/shiro/ci.yml?branch=main&label=ci"></a>

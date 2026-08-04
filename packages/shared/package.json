@@ -1,6 +1,6 @@
 {
   "name": "@shiro-sdk/shared",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Shared utilities for Shiro.",
   "license": "MIT",
   "type": "module",

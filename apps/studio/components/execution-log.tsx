@@ -100,7 +100,7 @@ export function ExecutionLog({ trace }: { readonly trace: StudioRunTrace }) {
           {lines.slice(0, visibleCount).map((line, index) => (
             <motion.div
               animate={{ opacity: 1, x: 0 }}
-              className="grid grid-cols-[88px_130px_1fr] gap-3 font-mono"
+              className="grid grid-cols-[100px_200px_1fr] gap-3 font-mono"
               initial={false}
               key={`${line.eventId}-${String(index)}`}
               transition={{ duration: 0.16 }}

@@ -56,11 +56,15 @@ export function MetricsDashboard({ trace }: { readonly trace: StudioRunTrace }) 
             icon={Gauge}
             label="Cost"
             trend="estimate"
-            value={
-              trace.tokenUsage?.estimatedCost === undefined
-                ? "—"
-                : `$${String(trace.tokenUsage.estimatedCost)}`
-            }
+            value={(() => {
+              const cost =
+                trace.tokenUsage?.estimatedCost ??
+                trace.modelCalls.reduce(
+                  (sum, call) => sum + (call.tokenUsage?.estimatedCost ?? 0),
+                  0
+                );
+              return cost === 0 ? "—" : `$${cost.toFixed(5)}`;
+            })()}
           />
           <MetricCard
             icon={Timer}

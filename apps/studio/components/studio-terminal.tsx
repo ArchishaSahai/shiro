@@ -2,26 +2,14 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, Pause, Play, RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState, type KeyboardEvent, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { MarkdownOutput } from "@/components/markdown-output";
 import { useRuntime } from "@/hooks/use-runtime";
 import type { TerminalLine } from "@/lib/runtime-events";
 
 export function StudioTerminal() {
-  const {
-    activeTrace,
-    clear,
-    command,
-    live,
-    mode,
-    replay,
-    setCommand,
-    setSpeed,
-    speed,
-    status,
-    stop,
-    submitCommand,
-  } = useRuntime();
+  const { activeTrace, live, mode, replay, setSpeed, speed, status, stop, submitCommand } =
+    useRuntime();
   const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +29,6 @@ export function StudioTerminal() {
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     submitCommand();
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "l" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      clear();
-    }
   };
 
   const copyText = visibleLines
@@ -168,15 +149,12 @@ export function StudioTerminal() {
             autoCapitalize="off"
             autoComplete="off"
             autoCorrect="off"
-            className="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-white outline-none placeholder:text-white/28"
-            onChange={(event) => {
-              setCommand(event.currentTarget.value);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="shiro run support-agent"
+            className="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-white/50 outline-none placeholder:text-white/20 cursor-not-allowed"
+            disabled={true}
+            placeholder="Use Chat to interact with agent"
             ref={inputRef}
             spellCheck={false}
-            value={command}
+            value=""
           />
           {!isRunning ? (
             <span className="terminal-cursor inline-block h-4 w-[2px] bg-[#ff4fd8]" />

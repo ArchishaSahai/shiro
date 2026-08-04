@@ -23,20 +23,23 @@ import ora from "ora";
 import prompts from "prompts";
 import {
   applyNonInteractiveInitCredentials,
-  configureProviderCredentials,
+  collectInitCredentials,
   ensureProviderApiKeyForDev,
   formatCredentialSuccessLine,
   isInteractiveTerminal,
   runAuthCommand,
+  writeInitEnvFile,
   type CredentialSource,
 } from "./credentials.js";
 import { loadProjectEnv } from "./env-file.js";
 import { getProviderCredential, isProviderId, type ProviderId } from "./providers.js";
+import { agentTsconfigTemplate, writeStandaloneStudioTsconfig } from "./tsconfig-templates.js";
+import { findWorkspaceRootOptional, resolveMonorepoVendorRoot } from "./workspace.js";
 
 const GITHUB_REPO = "ArchishaSahai/shiro";
 const REQUIRE = createRequire(import.meta.url);
 
-let VERSION = "0.1.7";
+let VERSION = "0.1.8";
 try {
   const pkgPath = REQUIRE.resolve("@shiro-sdk/cli/package.json");
   VERSION = (REQUIRE(pkgPath) as { version: string }).version;
@@ -187,10 +190,11 @@ if (isCliEntrypoint()) {
 }
 
 async function initCommand(name: string | undefined, options: InitCommandOptions): Promise<void> {
-  const answers =
-    options.yes === true || !isInteractiveTerminal()
-      ? defaultsForInit(options)
-      : await promptForInit(options);
+  // Capture once — `stdin.isTTY` can become false after `prompts` / `ora`, which previously
+  // caused the API key step to be skipped even though provider/model prompts ran.
+  const interactive = options.yes !== true && isInteractiveTerminal();
+
+  const answers = interactive ? await promptForInit(options) : defaultsForInit(options);
   const targetName = name ?? "my-agent";
   const targetDir = resolve(process.cwd(), targetName);
 
@@ -198,24 +202,23 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
     throwUserError(`Directory already exists: ${targetName}`);
   }
 
+  // Credential onboarding runs immediately after provider/model selection, before scaffolding.
+  // Fresh projects have no `.env` yet — only a process env key skips the prompt.
+  let credentials;
+  if (interactive) {
+    credentials = await collectInitCredentials({
+      interactive: true,
+      providerId: answers.provider,
+    });
+  } else {
+    credentials = applyNonInteractiveInitCredentials(answers.provider);
+  }
+
   const spinner = ora(`Creating ${targetName}`).start();
   ensureLocalPackagesBuilt();
   const installSpecs = await resolveInstallSpecs(targetDir);
-  await writeProject(targetDir, targetName, answers, installSpecs);
+  await writeProject(targetDir, targetName, answers, installSpecs, credentials.apiKey);
   spinner.succeed(`Created ${targetName}`);
-
-  let credentialSource: CredentialSource = "none";
-  if (options.yes === true || !isInteractiveTerminal()) {
-    const credentials = applyNonInteractiveInitCredentials(answers.provider, targetDir);
-    credentialSource = credentials.source;
-  } else {
-    const credentials = await configureProviderCredentials(answers.provider, {
-      persist: true,
-      projectDir: targetDir,
-      required: false,
-    });
-    credentialSource = credentials.source;
-  }
 
   let depsInstalled = false;
   if (options.install === false) {
@@ -239,14 +242,14 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
   }
 
   printInitSuccess({
-    credentialSource,
+    credentialSource: credentials.source,
     depsInstalled,
     packageManager: answers.packageManager,
     provider: answers.provider,
     targetName,
   });
 
-  if (depsInstalled && isInteractiveTerminal() && options.yes !== true) {
+  if (depsInstalled && interactive) {
     const launch = await prompts(
       {
         choices: [
@@ -492,14 +495,15 @@ async function writeProject(
   targetDir: string,
   targetName: string,
   answers: InitAnswers,
-  installSpecs: InstallSpecs
+  installSpecs: InstallSpecs,
+  apiKey: string | null
 ): Promise<void> {
   const sourceExtension = answers.language === "typescript" ? "ts" : "js";
   const credential = getProviderCredential(answers.provider);
   await mkdir(join(targetDir, "src"), { recursive: true });
   await writeFile(join(targetDir, ".env.example"), envTemplate(answers.provider), "utf8");
-  // Seed .env so collectInitCredentials / writeEmptyProviderEnv can upsert the key.
-  await writeFile(join(targetDir, ".env"), envTemplate(answers.provider), "utf8");
+  // Always materialize `.env` from the credential step (key or empty).
+  writeInitEnvFile(targetDir, answers.provider, apiKey);
   await writeFile(
     join(targetDir, ".gitignore"),
     ["node_modules", ".env", ".shiro", ".shiro-packages", ""].join("\n"),
@@ -526,7 +530,7 @@ async function writeProject(
   );
 
   if (answers.language === "typescript") {
-    await writeFile(join(targetDir, "tsconfig.json"), tsconfigTemplate(), "utf8");
+    await writeFile(join(targetDir, "tsconfig.json"), agentTsconfigTemplate(), "utf8");
   }
 }
 
@@ -818,27 +822,6 @@ function readNumberProperty(source: string, key: string): number | undefined {
   return match?.[1] === undefined ? undefined : Number.parseInt(match[1], 10);
 }
 
-/** Returns monorepo root when present (from cwd or this CLI install), otherwise null. */
-function findWorkspaceRootOptional(): string | null {
-  const starts = [process.cwd(), dirname(fileURLToPath(import.meta.url))];
-
-  for (const start of starts) {
-    let current = start;
-    for (;;) {
-      if (existsSync(join(current, "pnpm-workspace.yaml"))) {
-        return current;
-      }
-      const parent = resolve(current, "..");
-      if (parent === current) {
-        break;
-      }
-      current = parent;
-    }
-  }
-
-  return null;
-}
-
 /** Build local packages when scaffolding with file: deps so exports resolve. */
 function ensureLocalPackagesBuilt(): void {
   const workspaceRoot = findWorkspaceRootOptional();
@@ -966,6 +949,7 @@ function findStudioDependencyNodeModules(studioRoot: string): string | null {
  */
 function prepareStudioLaunchRoot(installedRoot: string): string {
   if (!isInsideNodeModules(installedRoot) && canResolveNextFrom(installedRoot)) {
+    ensureStandaloneStudioTsconfig(installedRoot);
     return installedRoot;
   }
 
@@ -996,6 +980,9 @@ function prepareStudioLaunchRoot(installedRoot: string): string {
   }
   symlinkSync(depsNodeModules, linkPath, process.platform === "win32" ? "junction" : "dir");
 
+  // Always rewrite — published Studio may still ship a monorepo `extends`.
+  ensureStandaloneStudioTsconfig(launchRoot);
+
   if (!canResolveNextFrom(launchRoot)) {
     throwUserError(
       [
@@ -1006,6 +993,18 @@ function prepareStudioLaunchRoot(installedRoot: string): string {
   }
 
   return launchRoot;
+}
+
+/** Guarantee Studio's tsconfig never extends monorepo-only `tsconfig.base.json`. */
+function ensureStandaloneStudioTsconfig(studioRoot: string): void {
+  const tsconfigPath = join(studioRoot, "tsconfig.json");
+  if (existsSync(tsconfigPath)) {
+    const raw = readFileSync(tsconfigPath, "utf8");
+    if (!raw.includes("tsconfig.base.json") && !/"extends"\s*:/.test(raw)) {
+      return;
+    }
+  }
+  writeStandaloneStudioTsconfig(tsconfigPath);
 }
 
 function isCliEntrypoint(): boolean {
@@ -1035,12 +1034,12 @@ interface InstallSpecs {
 }
 
 /**
- * Prefer vendored local monorepo packages so `pnpm install` works before npm publish.
- * Copies built package contents and rewrites @shiro-sdk/* deps to sibling file: folders.
- * Studio is vendored only as a transitive dependency of the CLI — never as a project dep.
+ * Prefer vendored local monorepo packages only when the *target project* lives
+ * inside the Shiro workspace. Running a local CLI binary from outside the repo
+ * must still emit npm semver ranges — never `file:.shiro-packages/...`.
  */
 async function resolveInstallSpecs(targetDir: string): Promise<InstallSpecs> {
-  const workspaceRoot = findWorkspaceRootOptional();
+  const workspaceRoot = resolveMonorepoVendorRoot(targetDir);
   if (workspaceRoot === null) {
     return {
       cli: `^${VERSION}`,
@@ -1102,45 +1101,15 @@ function vendorPackage(
 
   // Studio also needs config files for Next.js.
   if (folderName === "shiro-studio") {
-    for (const fileName of ["next.config.mjs", "postcss.config.mjs", "tsconfig.json"]) {
+    for (const fileName of ["next.config.mjs", "postcss.config.mjs"]) {
       const from = join(source, fileName);
       if (existsSync(from)) {
         cpSync(from, join(destination, fileName));
       }
     }
 
-    // Consumer installs are outside the monorepo — flatten tsconfig.
-    const studioTsconfigPath = join(destination, "tsconfig.json");
-    if (existsSync(studioTsconfigPath)) {
-      const studioTsconfig = JSON.parse(readFileSync(studioTsconfigPath, "utf8")) as {
-        extends?: string;
-        compilerOptions?: Record<string, unknown>;
-        include?: string[];
-        exclude?: string[];
-      };
-      delete studioTsconfig.extends;
-      studioTsconfig.compilerOptions = {
-        allowJs: true,
-        baseUrl: ".",
-        esModuleInterop: true,
-        incremental: true,
-        isolatedModules: true,
-        jsx: "preserve",
-        lib: ["DOM", "DOM.Iterable", "ES2023"],
-        module: "ESNext",
-        moduleDetection: "force",
-        moduleResolution: "Bundler",
-        noEmit: true,
-        paths: { "@/*": ["./*"] },
-        plugins: [{ name: "next" }],
-        resolveJsonModule: true,
-        skipLibCheck: true,
-        strict: true,
-        target: "ES2023",
-        ...(studioTsconfig.compilerOptions ?? {}),
-      };
-      writeFileSync(studioTsconfigPath, `${JSON.stringify(studioTsconfig, null, 2)}\n`, "utf8");
-    }
+    // Always write a self-contained Studio tsconfig — never ship monorepo `extends`.
+    writeStandaloneStudioTsconfig(join(destination, "tsconfig.json"));
   }
 
   const vendoredPackageJsonPath = join(destination, "package.json");
@@ -1207,24 +1176,6 @@ function packageJsonTemplate(
   )}\n`;
 }
 
-function tsconfigTemplate(): string {
-  return `${JSON.stringify(
-    {
-      compilerOptions: {
-        exactOptionalPropertyTypes: true,
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        noUncheckedIndexedAccess: true,
-        strict: true,
-        target: "ES2023",
-      },
-      include: ["src", "shiro.config.ts"],
-    },
-    null,
-    2
-  )}\n`;
-}
-
 function configTemplate(answers: InitAnswers): string {
   return `export default {
   provider: "${answers.provider}",
@@ -1265,16 +1216,30 @@ studio.setAgentName(agent.name);
 // Keep the process alive so Studio can send prompts (Live Mode).
 console.log("Agent ready. Open Studio with: pnpm exec shiro dev");
 console.log(\`Studio URL: \${process.env.SHIRO_STUDIO_URL ?? "ws://127.0.0.1:4317"}\`);
+console.log("Keep this process running, then chat from Studio.");
 
 if (process.argv.includes("--once")) {
   const result = await engine.execute(agent, "Hello!");
   console.log(result.output);
+  studio.close();
   process.exit(0);
 }
 
-await new Promise<never>(() => {
-  // Intentional: wait for Studio execute requests until the process is stopped.
-});
+// Do not use \`await new Promise(() => {})\` — modern Node treats an unsettled
+// top-level await as a hang and exits with code 13. A timer retains the event
+// loop with negligible CPU; SIGINT/SIGTERM shut down cleanly.
+const keepAlive = setInterval(() => {
+  // no-op keep-alive
+}, 60_000);
+
+const shutdown = () => {
+  clearInterval(keepAlive);
+  studio.close();
+  process.exit(0);
+};
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
 `;
 }
 
