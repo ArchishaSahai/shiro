@@ -37,7 +37,9 @@
     "prepare": "husky",
     "source:docs": "pnpm --filter @shiro-sdk/docs source",
     "test": "turbo run test",
-    "typecheck": "pnpm source:docs && tsc -b"
+    "typecheck": "pnpm source:docs && tsc -b",
+    "release:publish": "pnpm --filter @shiro-sdk/core --filter @shiro-sdk/shared --filter @shiro-sdk/openai --filter @shiro-sdk/studio --filter @shiro-sdk/cli publish --access public --no-git-checks",
+    "pack:check": "node ./scripts/pack-check.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml}": [

@@ -39,8 +39,11 @@ Useful flags:
 | `-y, --yes`                         | Defaults, no prompts        |
 | `--no-install`                      | Skip dependency install     |
 
-After init, set `OPENAI_API_KEY`, then run the project’s `dev` script. Open Studio with
-`pnpm studio` (runs `shiro dev`).
+After init, `.env` is written automatically. If `OPENAI_API_KEY` (or the provider’s key) is
+already in your environment, Shiro detects it and skips the prompt. Otherwise you can paste a key,
+skip, or configure later with `shiro auth`. Run the project’s `dev` script, or open Studio with
+`pnpm studio` (runs `shiro dev`). If the key is missing, `shiro dev` will ask for it before
+launching.
 
 When you run init from this monorepo, generated dependencies use local `file:` paths so
 `pnpm install` works before packages are published to npm.
@@ -57,6 +60,17 @@ shiro dev --port 3001
 `dev` runs the same checks as `doctor`, then launches Studio from the CLI package
 (Studio is a dependency of `@shiro-sdk/cli`, not of your app). It does **not** require installing
 `@shiro-sdk/studio` in the project.
+
+### Configure credentials
+
+```bash
+shiro auth
+shiro auth --provider openai
+```
+
+Detects the project provider (from `shiro.config.ts`), prompts for an API key (or reuses an
+existing environment / `.env` value in non-interactive mode), optionally verifies it, and updates
+`.env` without disturbing unrelated variables.
 
 ### Diagnose a broken setup
 
@@ -90,7 +104,8 @@ shiro plugins
 - Expecting `shiro run` to orchestrate production agents — define agents in code; use Studio to
   inspect traces
 - Adding `@shiro-sdk/studio` to the app — Studio ships with the CLI; use `shiro dev`
-- Skipping `OPENAI_API_KEY` before `pnpm dev`
+- Skipping the API key prompt and then wondering why the agent cannot call the provider — set
+  the key in `.env`, or let `shiro dev` ask again
 
 ## Related
 

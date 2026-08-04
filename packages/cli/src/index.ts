@@ -21,11 +21,22 @@ import chalk from "chalk";
 import { Command } from "commander";
 import ora from "ora";
 import prompts from "prompts";
+import {
+  applyNonInteractiveInitCredentials,
+  configureProviderCredentials,
+  ensureProviderApiKeyForDev,
+  formatCredentialSuccessLine,
+  isInteractiveTerminal,
+  runAuthCommand,
+  type CredentialSource,
+} from "./credentials.js";
+import { loadProjectEnv } from "./env-file.js";
+import { getProviderCredential, isProviderId, type ProviderId } from "./providers.js";
 
 const GITHUB_REPO = "ArchishaSahai/shiro";
 const REQUIRE = createRequire(import.meta.url);
 
-let VERSION = "0.1.6";
+let VERSION = "0.1.7";
 try {
   const pkgPath = REQUIRE.resolve("@shiro-sdk/cli/package.json");
   VERSION = (REQUIRE(pkgPath) as { version: string }).version;
@@ -51,7 +62,6 @@ const PROVIDERS: readonly ProviderSummary[] = [
 
 type PackageManager = "pnpm" | "npm" | "yarn";
 type Language = "typescript" | "javascript";
-type ProviderId = "openai";
 type CheckStatus = "ok" | "warning" | "error";
 
 interface InitAnswers {
@@ -130,6 +140,14 @@ program
   });
 
 program
+  .command("auth")
+  .description("Configure provider API credentials for this project.")
+  .option("--provider <provider>", "Provider id (defaults to shiro.config.ts)", parseProvider)
+  .action(async (options: { readonly provider?: ProviderId }) => {
+    await authCommand(options.provider);
+  });
+
+program
   .command("doctor")
   .description("Run project diagnostics.")
   .action(async () => {
@@ -169,7 +187,10 @@ if (isCliEntrypoint()) {
 }
 
 async function initCommand(name: string | undefined, options: InitCommandOptions): Promise<void> {
-  const answers = options.yes === true ? defaultsForInit(options) : await promptForInit(options);
+  const answers =
+    options.yes === true || !isInteractiveTerminal()
+      ? defaultsForInit(options)
+      : await promptForInit(options);
   const targetName = name ?? "my-agent";
   const targetDir = resolve(process.cwd(), targetName);
 
@@ -183,6 +204,20 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
   await writeProject(targetDir, targetName, answers, installSpecs);
   spinner.succeed(`Created ${targetName}`);
 
+  let credentialSource: CredentialSource = "none";
+  if (options.yes === true || !isInteractiveTerminal()) {
+    const credentials = applyNonInteractiveInitCredentials(answers.provider, targetDir);
+    credentialSource = credentials.source;
+  } else {
+    const credentials = await configureProviderCredentials(answers.provider, {
+      persist: true,
+      projectDir: targetDir,
+      required: false,
+    });
+    credentialSource = credentials.source;
+  }
+
+  let depsInstalled = false;
   if (options.install === false) {
     printMuted(
       `Skipped dependency installation. Run ${installCommandFor(answers.packageManager)} inside ${targetName}.`
@@ -193,6 +228,7 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
 
     if (result.status === 0) {
       install.succeed("Dependencies installed");
+      depsInstalled = true;
     } else {
       install.warn("Project created, but dependency installation did not complete");
       printMuted(`Run ${installCommandFor(answers.packageManager)} inside ${targetName}.`);
@@ -202,22 +238,67 @@ async function initCommand(name: string | undefined, options: InitCommandOptions
     }
   }
 
-  console.log(
-    boxen(
-      [
-        chalk.bold("Shiro project ready"),
-        "",
-        `${chalk.dim("Next:")} cd ${targetName}`,
-        `${chalk.dim("Env:")} cp .env.example .env`,
-        `${chalk.dim("Run:")} ${answers.packageManager === "npm" ? "npm run dev" : `${answers.packageManager} dev`}`,
-        `${chalk.dim("Studio:")} pnpm exec shiro dev`,
-      ].join("\n"),
-      { borderColor: "white", padding: 1 }
-    )
-  );
+  printInitSuccess({
+    credentialSource,
+    depsInstalled,
+    packageManager: answers.packageManager,
+    provider: answers.provider,
+    targetName,
+  });
+
+  if (depsInstalled && isInteractiveTerminal() && options.yes !== true) {
+    const launch = await prompts(
+      {
+        choices: [
+          { title: "Yes", value: true },
+          { title: "No", value: false },
+        ],
+        initial: 0,
+        message: "Launch Shiro Studio now?",
+        name: "launch",
+        type: "select",
+      },
+      {
+        onCancel: () => {
+          // Soft cancel — project is already created.
+        },
+      }
+    );
+
+    if (launch.launch === true) {
+      process.chdir(targetDir);
+      await launchStudioDev(undefined, { openBrowser: true, printReady: true });
+    }
+  }
+}
+
+async function authCommand(providerOption: ProviderId | undefined): Promise<void> {
+  loadProjectEnv();
+  const config = await readConfig();
+  const fromConfig =
+    typeof config.provider === "string" && isProviderId(config.provider)
+      ? config.provider
+      : undefined;
+  const providerId = providerOption ?? fromConfig ?? "openai";
+  await runAuthCommand(providerId);
 }
 
 async function devCommand(port: number | undefined): Promise<void> {
+  await launchStudioDev(port, { openBrowser: false, printReady: false });
+}
+
+async function launchStudioDev(
+  port: number | undefined,
+  options: { readonly openBrowser: boolean; readonly printReady: boolean }
+): Promise<void> {
+  loadProjectEnv(process.cwd());
+
+  const config = await readConfig();
+  const providerId = isProviderId(config.provider ?? "openai")
+    ? (config.provider as ProviderId)
+    : "openai";
+  await ensureProviderApiKeyForDev(providerId);
+
   const diagnostics = await collectDiagnostics();
   printDiagnostics(diagnostics);
 
@@ -225,7 +306,7 @@ async function devCommand(port: number | undefined): Promise<void> {
     throwUserError("Fix the errors above before starting development.");
   }
 
-  const configuredPort = port ?? (await readConfig()).studio?.port ?? 3001;
+  const configuredPort = port ?? config.studio?.port ?? 3001;
   const installedStudioRoot = resolveStudioRoot();
 
   if (installedStudioRoot === null) {
@@ -243,17 +324,32 @@ async function devCommand(port: number | undefined): Promise<void> {
   // paths break webpack/SWC). Materialize a launch copy outside node_modules.
   const studioRoot = prepareStudioLaunchRoot(installedStudioRoot);
 
-  console.log(chalk.bold(`Launching Shiro Studio on http://localhost:${String(configuredPort)}`));
-  console.log(chalk.dim(`Studio root: ${studioRoot}`));
-
+  const studioUrl = `http://localhost:${String(configuredPort)}`;
   const runtimePort = configuredPort + 1316;
   const runtimeUrl = `ws://127.0.0.1:${String(runtimePort)}`;
+
+  if (options.printReady) {
+    console.log();
+    console.log(chalk.green("✓ Studio running"));
+    console.log(chalk.green("✓ Runtime listening"));
+    console.log(chalk.green("✓ Waiting for your agent..."));
+    console.log();
+  }
+
+  console.log(chalk.bold(`Launching Shiro Studio on ${studioUrl}`));
+  console.log(chalk.dim(`Studio root: ${studioRoot}`));
   console.log(chalk.dim(`Runtime hub: ${runtimeUrl}`));
   console.log(
     chalk.dim(
       `Connect agents with: SHIRO_STUDIO_URL=${runtimeUrl} (set automatically by shiro init templates)`
     )
   );
+
+  if (options.openBrowser) {
+    setTimeout(() => {
+      openInBrowser(studioUrl);
+    }, 2500);
+  }
 
   const child = spawn(
     process.execPath,
@@ -277,6 +373,7 @@ async function devCommand(port: number | undefined): Promise<void> {
 }
 
 async function doctorCommand(): Promise<void> {
+  loadProjectEnv();
   printDiagnostics(await collectDiagnostics());
 }
 
@@ -296,6 +393,7 @@ async function infoCommand(): Promise<void> {
 }
 
 async function providersCommand(): Promise<void> {
+  loadProjectEnv();
   const packageJson = await readPackageJson();
 
   console.log(chalk.bold("Providers"));
@@ -397,8 +495,11 @@ async function writeProject(
   installSpecs: InstallSpecs
 ): Promise<void> {
   const sourceExtension = answers.language === "typescript" ? "ts" : "js";
+  const credential = getProviderCredential(answers.provider);
   await mkdir(join(targetDir, "src"), { recursive: true });
-  await writeFile(join(targetDir, ".env.example"), envTemplate(), "utf8");
+  await writeFile(join(targetDir, ".env.example"), envTemplate(answers.provider), "utf8");
+  // Seed .env so collectInitCredentials / writeEmptyProviderEnv can upsert the key.
+  await writeFile(join(targetDir, ".env"), envTemplate(answers.provider), "utf8");
   await writeFile(
     join(targetDir, ".gitignore"),
     ["node_modules", ".env", ".shiro", ".shiro-packages", ""].join("\n"),
@@ -420,7 +521,7 @@ async function writeProject(
   await writeFile(join(targetDir, "shiro.config.ts"), configTemplate(answers), "utf8");
   await writeFile(
     join(targetDir, "src", `agent.${sourceExtension}`),
-    agentTemplate(answers),
+    agentTemplate(answers, credential.envVar),
     "utf8"
   );
 
@@ -441,6 +542,7 @@ function runInstall(
 }
 
 async function collectDiagnostics(): Promise<readonly Diagnostic[]> {
+  loadProjectEnv();
   const packageJson = await readPackageJson();
   const config = await readConfig();
   const diagnostics: Diagnostic[] = [];
@@ -624,6 +726,54 @@ function printMuted(message: string): void {
   console.log(chalk.dim(message));
 }
 
+function printInitSuccess(options: {
+  readonly credentialSource: CredentialSource;
+  readonly depsInstalled: boolean;
+  readonly packageManager: PackageManager;
+  readonly provider: ProviderId;
+  readonly targetName: string;
+}): void {
+  const runDev = options.packageManager === "npm" ? "npm run dev" : `${options.packageManager} dev`;
+  const credentialLine = formatCredentialSuccessLine(options.provider, options.credentialSource);
+  const lines = [
+    chalk.green("✔ Project created"),
+    options.depsInstalled
+      ? chalk.green("✔ Dependencies installed")
+      : chalk.yellow("⚠ Dependencies not installed"),
+    options.credentialSource === "none"
+      ? chalk.yellow(credentialLine)
+      : chalk.green(credentialLine),
+    chalk.green("✔ Ready to build"),
+    "",
+    chalk.bold("Next steps:"),
+    "",
+    `cd ${options.targetName}`,
+    runDev,
+    "",
+    chalk.dim("To inspect your agent visually:"),
+    `${options.packageManager === "npm" ? "npx" : `${options.packageManager} exec`} shiro dev`,
+  ];
+
+  console.log();
+  console.log(boxen(lines.join("\n"), { borderColor: "white", padding: 1 }));
+}
+
+function openInBrowser(url: string): void {
+  try {
+    if (process.platform === "win32") {
+      spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" }).unref();
+      return;
+    }
+    if (process.platform === "darwin") {
+      spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
+      return;
+    }
+    spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
+  } catch {
+    // Browser open is best-effort.
+  }
+}
+
 function throwUserError(message: string): never {
   console.error(chalk.red(message));
   process.exit(1);
@@ -643,7 +793,7 @@ function parsePackageManager(value: string): PackageManager {
 }
 
 function parseProvider(value: string): ProviderId {
-  return parseChoice(value, ["openai"], "openai");
+  return isProviderId(value) ? value : "openai";
 }
 
 function parseLanguage(value: string): Language {
@@ -1012,8 +1162,9 @@ function vendorPackage(
   writeFileSync(vendoredPackageJsonPath, `${JSON.stringify(vendored, null, 2)}\n`, "utf8");
 }
 
-function envTemplate(): string {
-  return ["OPENAI_API_KEY=", "SHIRO_STUDIO_URL=ws://127.0.0.1:4317", ""].join("\n");
+function envTemplate(providerId: ProviderId = "openai"): string {
+  const credential = getProviderCredential(providerId);
+  return [`${credential.envVar}=`, "SHIRO_STUDIO_URL=ws://127.0.0.1:4317", ""].join("\n");
 }
 
 function packageJsonTemplate(
@@ -1085,7 +1236,7 @@ function configTemplate(answers: InitAnswers): string {
 `;
 }
 
-function agentTemplate(answers: InitAnswers): string {
+function agentTemplate(answers: InitAnswers, apiKeyEnvVar: string): string {
   return `import "dotenv/config";
 import { Agent, Engine, TraceManager, connectStudio } from "@shiro-sdk/core";
 import { OpenAIPlugin } from "@shiro-sdk/openai";
@@ -1097,7 +1248,7 @@ const engine = new Engine({ events });
 
 engine.use(
   new OpenAIPlugin({
-    apiKey: process.env.OPENAI_API_KEY ?? "",
+    apiKey: process.env.${apiKeyEnvVar} ?? "",
     model: "${answers.model}",
   })
 );
@@ -1129,6 +1280,7 @@ await new Promise<never>(() => {
 
 function readmeTemplate(name: string, answers: InitAnswers): string {
   const run = answers.packageManager === "npm" ? "npm run" : answers.packageManager;
+  const credential = getProviderCredential(answers.provider);
   return `# ${name}
 
 A Shiro agent project using ${answers.provider} and ${answers.model}.
@@ -1136,8 +1288,7 @@ A Shiro agent project using ${answers.provider} and ${answers.model}.
 ## Setup
 
 \`\`\`bash
-cp .env.example .env
-# set OPENAI_API_KEY
+# .env is created by \`shiro init\` — set ${credential.envVar} if you skipped the prompt
 ${answers.packageManager === "npm" ? "npm install" : `${answers.packageManager} install`}
 \`\`\`
 

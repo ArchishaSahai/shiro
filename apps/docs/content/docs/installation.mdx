@@ -67,13 +67,12 @@ tools or Studio.
 ```bash
 pnpm dlx @shiro-sdk/cli init my-agent
 cd my-agent
-cp .env.example .env
 pnpm dev
 pnpm studio
 ```
 
-`shiro init` creates a project. `shiro dev` / `pnpm studio` runs diagnostics and launches
-[Studio](/docs/studio). See [CLI](/docs/cli).
+`shiro init` creates the project and writes `.env` (prompts for the provider API key).
+`shiro dev` / `pnpm studio` runs diagnostics and launches [Studio](/docs/studio). See [CLI](/docs/cli).
 
 ## Monorepo contributors
 

@@ -12,3 +12,11 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 .dist/
+
+# Accidental local scaffolds / pack output (never commit)
+travel-agent/
+packages/*/package/
+*.tgz
+package/
+.shiro/
+.shiro-packages/

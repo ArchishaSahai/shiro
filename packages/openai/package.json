@@ -1,6 +1,6 @@
 {
   "name": "@shiro-sdk/openai",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "OpenAI provider plugin for Shiro.",
   "license": "MIT",
   "type": "module",
@@ -39,15 +39,17 @@
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
+    "prepublishOnly": "node ../../scripts/prepack.js && node ../../scripts/assert-publishable.js",
     "prepack": "node ../../scripts/prepack.js",
-    "postpack": "node ../../scripts/postpack.js"
+    "postpack": "node ../../scripts/postpack.js",
+    "postpublish": "node ../../scripts/restore-package-json.js"
   },
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@shiro-sdk/core": "workspace:^0.1.6",
+    "@shiro-sdk/core": "workspace:*",
     "openai": "^7.2.0"
   },
   "devDependencies": {

@@ -20,13 +20,17 @@ pnpm dlx @shiro-sdk/cli init my-agent
 
 ```bash
 pnpm dlx @shiro-sdk/cli init my-agent
+# prompts for provider credentials and writes .env
 cd my-agent
-cp .env.example .env   # set OPENAI_API_KEY
 pnpm dev               # run the agent
 pnpm exec shiro dev    # open Studio (ships with the CLI)
 ```
 
-Common commands: `shiro init`, `shiro dev`, `shiro doctor`, `shiro info`, `shiro providers`, `shiro plugins`.
+`shiro init` writes `.env` for you (provider API key + `SHIRO_STUDIO_URL`). Existing shell
+environment variables are detected automatically. Use `shiro auth` to update credentials later.
+If you skip the key, `shiro dev` will ask again before launching Studio.
+
+Common commands: `shiro init`, `shiro auth`, `shiro dev`, `shiro doctor`, `shiro info`, `shiro providers`, `shiro plugins`.
 
 ## Documentation
 
