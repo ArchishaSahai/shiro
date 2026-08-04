@@ -9,7 +9,7 @@ import {
   type Tool as ShiroTool,
   type ToolCallRequest,
   type JsonObject,
-} from "@shiro/core";
+} from "@shiro-sdk/core";
 import OpenAI from "openai";
 import type { ClientOptions } from "openai";
 import type {

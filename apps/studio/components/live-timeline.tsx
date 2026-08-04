@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { formatDuration, type StudioRunTrace } from "@/lib/trace-utils";
+import { formatClockTime, formatDuration, type StudioRunTrace } from "@/lib/trace-utils";
 
 export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
   const items = trace.timeline.spans;
@@ -66,7 +66,7 @@ export function LiveTimeline({ trace }: { readonly trace: StudioRunTrace }) {
                               {span.name}
                             </p>
                             <p className="mt-0.5 font-mono text-[10px] text-white/40">
-                              {span.startTime.toLocaleTimeString()}
+                              {formatClockTime(span.startTime)}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">

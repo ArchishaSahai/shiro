@@ -3,7 +3,7 @@ import {
   type Plugin,
   type PluginContext,
   type PluginMetadata,
-} from "@shiro/core";
+} from "@shiro-sdk/core";
 import type { OpenAIProviderConfig } from "./config.js";
 import { OpenAIProvider } from "./provider.js";
 
@@ -26,7 +26,7 @@ export class OpenAIPlugin implements Plugin {
       ]),
       description: "OpenAI Responses API provider for Shiro.",
       homepage: "https://platform.openai.com/docs/api-reference/responses",
-      id: "@shiro/openai",
+      id: "@shiro-sdk/openai",
       keywords: Object.freeze(["openai", "provider", "responses"]),
       license: "MIT",
       name: "OpenAI",

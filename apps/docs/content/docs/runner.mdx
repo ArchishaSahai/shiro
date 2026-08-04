@@ -66,7 +66,7 @@ Attach an event bus or `TraceManager` to the engine before executing. Studio and
 consume those events:
 
 ```ts
-import { JsonTraceExporter, TraceManager } from "@shiro/core";
+import { JsonTraceExporter, TraceManager } from "@shiro-sdk/core";
 
 const traces = new TraceManager();
 const engine = new Engine({ events: traces });

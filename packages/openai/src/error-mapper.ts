@@ -1,4 +1,4 @@
-import { ProviderError, ShiroErrorCode } from "@shiro/core";
+import { ProviderError, ShiroErrorCode } from "@shiro-sdk/core";
 
 /**
  * Maps OpenAI SDK errors into Shiro provider errors.

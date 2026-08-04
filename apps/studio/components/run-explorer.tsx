@@ -20,13 +20,20 @@ interface RunExplorerProps {
   readonly snapshot: StudioTraceSnapshot;
   readonly selectedRunId: string;
   readonly onSelectRun: (runId: string) => void;
+  readonly query: string;
+  readonly onQueryChange: (query: string) => void;
 }
 
 type RunFilter = "all" | StudioTraceStatus;
 type RunSort = "newest" | "duration";
 
-export function RunExplorer({ onSelectRun, selectedRunId, snapshot }: RunExplorerProps) {
-  const [query, setQuery] = useState("");
+export function RunExplorer({
+  onQueryChange,
+  onSelectRun,
+  query,
+  selectedRunId,
+  snapshot,
+}: RunExplorerProps) {
   const [filter, setFilter] = useState<RunFilter>("all");
   const [sort, setSort] = useState<RunSort>("newest");
   const runs = useMemo(
@@ -55,7 +62,7 @@ export function RunExplorer({ onSelectRun, selectedRunId, snapshot }: RunExplore
             aria-label="Search runs"
             className="h-10 w-full rounded-xl border border-white/[.08] bg-black/30 pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-white/28 focus:border-[#ff4fd8]/45 focus:ring-2 focus:ring-[#ff4fd8]/10"
             onChange={(event) => {
-              setQuery(event.currentTarget.value);
+              onQueryChange(event.currentTarget.value);
             }}
             placeholder="Search agent, run, provider..."
             value={query}
@@ -176,11 +183,30 @@ function filterRuns(
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = traces.filter((trace) => {
     const matchesFilter = filter === "all" || trace.finalStatus === filter;
-    const searchable = `${trace.runId} ${trace.agentName ?? ""} ${trace.provider ?? ""} ${
-      trace.model ?? ""
-    }`.toLowerCase();
+    if (!matchesFilter) {
+      return false;
+    }
+    if (normalizedQuery.length === 0) {
+      return true;
+    }
 
-    return matchesFilter && searchable.includes(normalizedQuery);
+    const tools = trace.toolExecutions.map((tool) => tool.toolName).join(" ");
+    const handoffs = trace.handoffs
+      .map((handoff) => `${handoff.sourceAgent} ${handoff.destinationAgent}`)
+      .join(" ");
+    const searchable = [
+      trace.runId,
+      trace.agentName ?? "",
+      trace.provider ?? "",
+      trace.model ?? "",
+      trace.sessionId ?? "",
+      tools,
+      handoffs,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return searchable.includes(normalizedQuery);
   });
 
   return [...filtered].sort((left, right) => {

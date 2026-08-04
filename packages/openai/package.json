@@ -1,10 +1,10 @@
 {
-  "name": "@shiro/openai",
-  "version": "0.1.0",
+  "name": "@shiro-sdk/openai",
+  "version": "0.1.6",
   "description": "OpenAI provider plugin for Shiro.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
+  "homepage": "https://shiro-docs.vercel.app/docs/providers",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ArchishaSahai/shiro.git",
@@ -30,20 +30,24 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "rimraf .tsbuildinfo && tsup ./src/index.ts --format esm --clean && tsc --emitDeclarationOnly",
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "node ../../scripts/prepack.js",
+    "postpack": "node ../../scripts/postpack.js"
   },
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@shiro/core": "workspace:*",
+    "@shiro-sdk/core": "workspace:^0.1.6",
     "openai": "^7.2.0"
   },
   "devDependencies": {

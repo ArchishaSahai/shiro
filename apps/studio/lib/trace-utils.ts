@@ -95,6 +95,9 @@ export interface StudioMemoryTrace {
   readonly recordCount?: number;
   readonly messageCount?: number;
   readonly sessionId?: string;
+  readonly before?: StudioJsonValue;
+  readonly after?: StudioJsonValue;
+  readonly memoryDiff?: "inserted" | "modified" | "removed";
 }
 
 export interface StudioTraceTimeline {
@@ -161,6 +164,29 @@ export function formatDuration(ms: number | undefined): string {
   }
 
   return `${ms.toFixed(0)}ms`;
+}
+
+/** Deterministic clock label (UTC) — avoids SSR/client locale & timezone mismatches. */
+export function formatClockTime(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(date);
+}
+
+/** Elapsed time from run start — stable across SSR/client even if absolute dates differ. */
+export function formatElapsedTime(timestamp: Date, startTime: Date): string {
+  const elapsedMs = Math.max(0, timestamp.getTime() - startTime.getTime());
+  const totalSeconds = elapsedMs / 1000;
+  if (totalSeconds < 60) {
+    return `+${totalSeconds.toFixed(2)}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds - minutes * 60;
+  return `+${String(minutes)}m ${seconds.toFixed(1)}s`;
 }
 
 export function statusTone(status: StudioTraceStatus): "success" | "danger" | "default" {

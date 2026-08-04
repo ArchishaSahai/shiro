@@ -13,6 +13,7 @@ export function StudioTerminal() {
     clear,
     command,
     live,
+    mode,
     replay,
     setCommand,
     setSpeed,
@@ -66,6 +67,15 @@ export function StudioTerminal() {
             {activeTrace !== null ? `shiro · ${activeTrace.id}` : "shiro · terminal"}
           </p>
           <StatusPill status={status} />
+          <span
+            className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
+              mode === "live"
+                ? "border-[#ff4fd8]/35 text-[#ff4fd8]"
+                : "border-white/[.08] text-white/40"
+            }`}
+          >
+            {mode === "live" ? "Live" : "Demo"}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           <button

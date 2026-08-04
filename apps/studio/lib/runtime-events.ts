@@ -15,14 +15,24 @@ export type StudioEventType =
   | "provider.connected"
   | "runner.creating"
   | "agent.calling"
+  | "agent.start"
+  | "prompt.built"
+  | "llm.request"
+  | "llm.response"
+  | "tool.start"
+  | "tool.end"
   | "tool.started"
   | "tool.completed"
   | "tool.failed"
+  | "handoff"
   | "handoff.started"
   | "handoff.completed"
+  | "guardrail"
+  | "plugin"
   | "approval.requested"
   | "approval.granted"
   | "approval.rejected"
+  | "memory.update"
   | "memory.session_loaded"
   | "memory.retrieved"
   | "memory.stored"
@@ -31,9 +41,11 @@ export type StudioEventType =
   | "provider.call.completed"
   | "response.streaming"
   | "response.completed"
+  | "output"
   | "span.started"
   | "span.ended"
   | "metrics.update"
+  | "trace.end"
   | "run.completed"
   | "run.failed"
   | "terminal.line";
@@ -82,6 +94,12 @@ export interface StudioEventPayload {
   readonly markdown?: string;
   readonly finalStatus?: StudioTraceStatus;
   readonly finalOutput?: StudioJsonValue;
+  readonly before?: StudioJsonValue;
+  readonly after?: StudioJsonValue;
+  readonly memoryDiff?: "inserted" | "modified" | "removed";
+  readonly error?: string;
+  readonly guardrailName?: string;
+  readonly pluginId?: string;
 }
 
 export interface MockTraceDefinition {

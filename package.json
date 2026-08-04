@@ -5,7 +5,7 @@
   "description": "Production-ready TypeScript Agent SDK.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
+  "homepage": "https://shiro-docs.vercel.app/docs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ArchishaSahai/shiro.git"
@@ -35,7 +35,7 @@
     "format:check": "prettier --check .",
     "lint": "pnpm source:docs && eslint .",
     "prepare": "husky",
-    "source:docs": "pnpm --filter @shiro/docs source",
+    "source:docs": "pnpm --filter @shiro-sdk/docs source",
     "test": "turbo run test",
     "typecheck": "pnpm source:docs && tsc -b"
   },

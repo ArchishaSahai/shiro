@@ -22,9 +22,21 @@ import { Command } from "commander";
 import ora from "ora";
 import prompts from "prompts";
 
-const VERSION = "0.1.0";
 const GITHUB_REPO = "ArchishaSahai/shiro";
 const REQUIRE = createRequire(import.meta.url);
+
+let VERSION = "0.1.6";
+try {
+  const pkgPath = REQUIRE.resolve("@shiro-sdk/cli/package.json");
+  VERSION = (REQUIRE(pkgPath) as { version: string }).version;
+} catch {
+  try {
+    const pkg = REQUIRE("../package.json") as { version: string };
+    VERSION = pkg.version;
+  } catch {
+    // fallback to static
+  }
+}
 
 const PROVIDERS: readonly ProviderSummary[] = [
   {

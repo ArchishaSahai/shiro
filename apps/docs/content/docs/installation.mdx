@@ -8,7 +8,7 @@ description: Install the runtime, a provider plugin, and verify the first execut
 Install the core runtime and the OpenAI provider package.
 
 ```bash
-pnpm add @shiro/core @shiro/openai zod
+pnpm add @shiro-sdk/core @shiro-sdk/openai zod
 ```
 
 `zod` is commonly used for tool `parameters` and structured `output` schemas because it exposes
@@ -16,14 +16,14 @@ a `.parse()` method Shiro can call.
 
 ## Packages
 
-| Package         | Purpose                                                             |
-| --------------- | ------------------------------------------------------------------- |
-| `@shiro/core`   | Engine, runner, agents, tools, memory, sessions, tracing, approvals |
-| `@shiro/openai` | OpenAI provider + plugin (`OpenAIPlugin`, `OpenAIProvider`)         |
-| `@shiro/studio` | Studio app for inspecting runs and traces                           |
-| `@shiro/cli`    | Project scaffolding and local Studio launch (`shiro` binary)        |
+| Package             | Purpose                                                             |
+| ------------------- | ------------------------------------------------------------------- |
+| `@shiro-sdk/core`   | Engine, runner, agents, tools, memory, sessions, tracing, approvals |
+| `@shiro-sdk/openai` | OpenAI provider + plugin (`OpenAIPlugin`, `OpenAIProvider`)         |
+| `@shiro-sdk/cli`    | Scaffolding + `shiro` binary (launches Studio via `shiro dev`)      |
 
-> The npm name `shiro` (unscoped) is **not** this project. Always use `@shiro/cli`.
+> The npm name `shiro` (unscoped) is **not** this project. Always use `@shiro-sdk/cli`.
+> Do **not** add `@shiro-sdk/studio` to your app — Studio is launched by the CLI.
 
 ## Environment
 
@@ -38,8 +38,8 @@ export OPENAI_API_KEY=...
 Create an engine, install the OpenAI plugin, define an agent with a provider id, execute once.
 
 ```ts
-import { Agent, Engine } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Agent, Engine } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 
 const engine = new Engine();
 engine.use(
@@ -65,7 +65,7 @@ tools or Studio.
 ## Scaffold with the CLI
 
 ```bash
-pnpm dlx @shiro/cli init my-agent
+pnpm dlx @shiro-sdk/cli init my-agent
 cd my-agent
 cp .env.example .env
 pnpm dev
@@ -82,16 +82,16 @@ From a clone of this repository:
 ```bash
 pnpm install
 pnpm build
-pnpm --filter @shiro/example-basic-agent start
+pnpm --filter @shiro-sdk/example-basic-agent start
 ```
 
 ## Common mistakes
 
-- Installing `@shiro/openai` but never calling `engine.use(new OpenAIPlugin(...))`
+- Installing `@shiro-sdk/openai` but never calling `engine.use(new OpenAIPlugin(...))`
 - Creating an agent without `provider`
 - Reading secrets from source files committed to git
 - Creating a new engine on every request — see [Engine](/docs/engine)
-- Using `pnpm dlx shiro` instead of `pnpm dlx @shiro/cli`
+- Using `pnpm dlx shiro` instead of `pnpm dlx @shiro-sdk/cli`
 
 ## Next
 

@@ -3,26 +3,25 @@
 import { motion } from "framer-motion";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { StudioRunTrace, StudioTraceEvent } from "@/lib/trace-utils";
+import { Terminal } from "@/components/ui/terminal";
+import { formatElapsedTime, type StudioRunTrace, type StudioTraceEvent } from "@/lib/trace-utils";
 
 const speeds = [0.5, 1, 2] as const;
-
-import { Terminal } from "@/components/ui/terminal";
 
 export function ExecutionLog({ trace }: { readonly trace: StudioRunTrace }) {
   const lines = useMemo(() => createLogLines(trace), [trace]);
   const [isPlaying, setIsPlaying] = useState(true);
   const [speedIndex, setSpeedIndex] = useState(1);
-  const [visibleCount, setVisibleCount] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(0);
   const speed = speeds[speedIndex] ?? 1;
 
   useEffect(() => {
-    setVisibleCount(1);
+    setVisibleCount(lines.length === 0 ? 0 : 1);
     setIsPlaying(true);
-  }, [trace.runId]);
+  }, [trace.runId, lines.length]);
 
   useEffect(() => {
-    if (!isPlaying || visibleCount >= lines.length) {
+    if (!isPlaying || visibleCount >= lines.length || lines.length === 0) {
       return;
     }
 
@@ -36,7 +35,10 @@ export function ExecutionLog({ trace }: { readonly trace: StudioRunTrace }) {
   }, [isPlaying, lines.length, speed, visibleCount]);
 
   const copyText = lines
-    .map((line) => `${line.timestamp.toLocaleTimeString()} [${line.type}] ${line.detail}`)
+    .map(
+      (line) =>
+        `${formatElapsedTime(line.timestamp, trace.startTime)} [${line.type}] ${line.detail}`
+    )
     .join("\n");
 
   const terminalActions = (
@@ -44,7 +46,7 @@ export function ExecutionLog({ trace }: { readonly trace: StudioRunTrace }) {
       <button
         className="terminal-action"
         onClick={() => {
-          setVisibleCount(1);
+          setVisibleCount(lines.length === 0 ? 0 : 1);
           setIsPlaying(true);
         }}
         type="button"
@@ -98,21 +100,25 @@ export function ExecutionLog({ trace }: { readonly trace: StudioRunTrace }) {
           {lines.slice(0, visibleCount).map((line, index) => (
             <motion.div
               animate={{ opacity: 1, x: 0 }}
-              className="grid grid-cols-[80px_130px_1fr] gap-3 font-mono"
-              initial={{ opacity: 0, x: -8 }}
+              className="grid grid-cols-[88px_130px_1fr] gap-3 font-mono"
+              initial={false}
               key={`${line.eventId}-${String(index)}`}
               transition={{ duration: 0.16 }}
             >
-              <span className="text-white/30">{line.timestamp.toLocaleTimeString()}</span>
+              <span className="text-white/30">
+                {formatElapsedTime(line.timestamp, trace.startTime)}
+              </span>
               <span className={lineTone(line.type)}>{line.type}</span>
               <span className="truncate text-white/80">{line.detail}</span>
             </motion.div>
           ))}
-          {visibleCount >= lines.length ? (
+          {lines.length === 0 ? (
+            <p className="font-mono text-white/35">waiting for events…</p>
+          ) : visibleCount >= lines.length ? (
             <motion.div
               animate={{ opacity: 1 }}
               className="pt-2 text-emerald-400 font-mono"
-              initial={{ opacity: 0 }}
+              initial={false}
             >
               ✓ {trace.finalStatus === "failed" ? "failed" : "success"}
             </motion.div>

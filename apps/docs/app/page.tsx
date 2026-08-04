@@ -213,7 +213,7 @@ function Hero() {
         </HeroItem>
         <HeroItem>
           <div className="mx-auto mt-8 max-w-md">
-            <CopyCommand command="pnpm add @shiro/core @shiro/openai zod" />
+            <CopyCommand command="pnpm add @shiro-sdk/core @shiro-sdk/openai zod" />
           </div>
         </HeroItem>
         <HeroItem>
@@ -453,8 +453,8 @@ function ProviderSection() {
         Providers are adapters, not architecture.
       </h2>
       <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-white/52">
-        The engine depends on Shiro’s provider contract. Use `@shiro/openai` today, or implement the
-        same interface for another model without changing agent code.
+        The engine depends on Shiro’s provider contract. Use `@shiro-sdk/openai` today, or implement
+        the same interface for another model without changing agent code.
       </p>
       <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-white/[.09] bg-black/30 p-4 text-left font-mono text-sm leading-7 text-white/64">
         <span className="text-white">provider.call</span> uses the same trace shape no matter which
@@ -525,7 +525,7 @@ function FinalCta() {
           app.
         </p>
         <div className="mx-auto mt-6 max-w-md">
-          <CopyCommand command="pnpm add @shiro/core @shiro/openai zod" />
+          <CopyCommand command="pnpm add @shiro-sdk/core @shiro-sdk/openai zod" />
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link className="shiro-button h-12 px-6" href="/docs/quick-start">

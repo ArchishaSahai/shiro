@@ -43,17 +43,18 @@ export function createEmptyLiveState(): LiveRunState {
 }
 
 export function reduceRuntimeEvent(state: LiveRunState, event: StudioRuntimeEvent): LiveRunState {
-  const events = [...state.events, event];
-  const terminalLines = appendTerminalLine(state.terminalLines, event);
-  const trace = reduceTrace(state.trace, event);
-  const metrics = deriveMetrics(trace, event.offsetMs);
-  const selectedTool = event.payload?.toolName ?? state.selectedTool;
+  const normalized = normalizeEvent(event);
+  const events = [...state.events, normalized];
+  const terminalLines = appendTerminalLine(state.terminalLines, normalized);
+  const trace = reduceTrace(state.trace, normalized);
+  const metrics = deriveMetrics(trace, normalized.offsetMs);
+  const selectedTool = normalized.payload?.toolName ?? state.selectedTool;
   const responseMarkdown =
-    event.payload?.markdown ??
-    (event.type === "response.completed" && typeof event.payload?.finalOutput === "string"
-      ? event.payload.finalOutput
+    normalized.payload?.markdown ??
+    (normalized.type === "response.completed" && typeof normalized.payload?.finalOutput === "string"
+      ? normalized.payload.finalOutput
       : state.responseMarkdown);
-  const activeNodeIds = deriveActiveNodes(trace, event);
+  const activeNodeIds = deriveActiveNodes(trace, normalized);
 
   return {
     activeNodeIds,
@@ -64,6 +65,25 @@ export function reduceRuntimeEvent(state: LiveRunState, event: StudioRuntimeEven
     terminalLines,
     trace,
   };
+}
+
+function normalizeEvent(event: StudioRuntimeEvent): StudioRuntimeEvent {
+  const aliases: Partial<Record<StudioRuntimeEvent["type"], StudioRuntimeEvent["type"]>> = {
+    "agent.start": "agent.calling",
+    "tool.start": "tool.started",
+    "tool.end": "tool.completed",
+    handoff: "handoff.started",
+    "memory.update": "memory.stored",
+    "llm.request": "provider.call.started",
+    "llm.response": "provider.call.completed",
+    "trace.end": "run.completed",
+    output: "response.completed",
+  };
+  const mapped = aliases[event.type];
+  if (mapped === undefined) {
+    return event;
+  }
+  return { ...event, type: mapped };
 }
 
 function appendTerminalLine(
@@ -297,6 +317,9 @@ function reduceTrace(
         ...(payload.sessionId === undefined && next.sessionId === undefined
           ? {}
           : { sessionId: payload.sessionId ?? next.sessionId }),
+        ...(payload.before === undefined ? {} : { before: payload.before }),
+        ...(payload.after === undefined ? {} : { after: payload.after }),
+        ...(payload.memoryDiff === undefined ? {} : { memoryDiff: payload.memoryDiff }),
       } satisfies StudioMemoryTrace;
 
       next = { ...next, memory: [...next.memory, memory] };
@@ -433,6 +456,8 @@ function reduceTrace(
   return next;
 }
 
+const TRACE_TIME_ORIGIN_MS = Date.UTC(2026, 0, 1, 12, 0, 0);
+
 function createBaseTrace(event: StudioRuntimeEvent): StudioRunTrace | null {
   if (event.runId.length === 0) {
     return null;
@@ -446,7 +471,8 @@ function createBaseTrace(event: StudioRuntimeEvent): StudioRunTrace | null {
     memory: [],
     modelCalls: [],
     runId: event.runId,
-    startTime: new Date(),
+    // Fixed origin + offsetMs keeps SSR/client timestamps identical.
+    startTime: new Date(TRACE_TIME_ORIGIN_MS),
     timeline: { events: [], spans: [] },
     toolExecutions: [],
     totalIterations: 0,

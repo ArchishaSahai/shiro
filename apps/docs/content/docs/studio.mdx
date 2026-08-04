@@ -1,13 +1,15 @@
 ---
 title: Studio
-description: Inspect runs with timelines, graphs, tools, memory, approvals, metrics, and traces.
+description: Live runtime debugger for Shiro agents — terminal, timelines, graphs, tools, memory, and traces.
 ---
 
 # Studio
 
-Studio is how you **see** a Shiro run. It is not a second orchestrator and not a chatbot. It
-loads sample traces (and imported JSON exports) so you can navigate timelines, graphs, tools,
-approvals, memory, metrics, and raw events while you build agents.
+Studio is how you **see** a Shiro run. It is not a second orchestrator. With `shiro dev` it
+becomes a local debugger: type prompts in the terminal, stream SDK events over WebSocket, and
+inspect timelines, graphs, tools, approvals, memory, metrics, and raw traces.
+
+When no agent is connected, Studio automatically uses **Demo Mode** with built-in sample traces.
 
 If [Tracing](/docs/tracing) is the source of truth, Studio is the workspace built on top of it.
 
@@ -22,100 +24,98 @@ Text logs answer “did something fail?” They rarely answer:
 
 ## What Studio is (and is not)
 
-| Studio is                        | Studio is not                 |
-| -------------------------------- | ----------------------------- |
-| An observer of runs and traces   | An execution engine           |
-| A timeline + graph + inspectors  | A replacement for your app UI |
-| A place to load and compare runs | A prompt playground           |
+| Studio is                       | Studio is not                 |
+| ------------------------------- | ----------------------------- |
+| A live observer of agent runs   | An execution engine           |
+| A timeline + graph + inspectors | A replacement for your app UI |
+| Demo Mode when offline          | A static marketing demo only  |
 
 ## Launching Studio
 
-### From a scaffolded project
-
 ```bash
-pnpm add -D @shiro/cli @shiro/studio
-pnpm studio
-# or
+pnpm add -D @shiro-sdk/cli
 pnpm exec shiro dev --port 3001
 ```
 
-### From the monorepo
+This starts:
 
-```bash
-pnpm --filter @shiro/studio dev
-# or
-pnpm exec shiro dev
+1. Studio UI (`http://localhost:3001`)
+2. Runtime WebSocket hub (`ws://127.0.0.1:4317` by default)
+3. Your browser (unless `--no-open`)
+
+## Connecting an agent (Live Mode)
+
+In your agent process:
+
+```ts
+import { Agent, Engine, TraceManager, connectStudio } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
+
+const studio = await connectStudio({ agentName: "Assistant" });
+const events = new TraceManager({ events: studio });
+const engine = new Engine({ events });
+
+engine.use(
+  new OpenAIPlugin({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: "gpt-5",
+  })
+);
+
+const agent = new Agent({
+  name: "Assistant",
+  instructions: "Be helpful.",
+  provider: "openai",
+});
+
+studio.bind(async (prompt) => engine.execute(agent, prompt));
 ```
+
+Set `SHIRO_STUDIO_URL` (scaffolded projects do this via `shiro init` templates). When the agent
+connects, Studio switches from **Demo Mode** to **Live Mode** automatically.
+
+Type a prompt in the Studio terminal:
+
+```text
+> Plan me a 5 day trip to Japan.
+```
+
+Studio sends the prompt to the bound agent, streams lifecycle events, and updates every panel.
 
 ## Workspace layout
 
-The shipped Studio UI is a dashboard:
-
 | Area           | Role                                           |
 | -------------- | ---------------------------------------------- |
+| Terminal       | Primary interaction — prompts + streamed output |
 | Sidebar        | Jump to Sessions, Runs, Tracing, Graph, …      |
-| Run explorer   | Select among loaded / sample runs              |
+| Run explorer   | Current / loaded runs                          |
 | Metrics        | Tokens, cost, latency, provider/tool timings   |
 | Execution log  | Chronological event lines for the selected run |
 | Timeline       | Ordered spans (provider, tool, handoff, …)     |
-| Graph          | Agent / tool / approval nodes for the run      |
-| Tool inspector | Arguments, status, and results for tool calls  |
-| Approvals      | Policy and decision details                    |
-| Memory         | Session / memory records for the run           |
-| Trace viewer   | Searchable events and span details             |
+| Execution graph| Live nodes + active path                       |
+| Tool inspector | Arguments, result, duration, status, errors    |
+| Memory         | Session ops with before → after when available |
+| Trace viewer   | Expandable / searchable JSON for the run       |
 
-Use **Import** in the header to load a JSON trace export produced by `JsonTraceExporter`.
+## Demo Mode
 
-## Sample traces
+If the runtime hub has no agent clients, Studio loads demo traces automatically and shows a
+**Demo Mode** badge. Connecting an agent flips the badge to **Live Mode** without restarting UI.
 
-Studio ships with demo runs that exercise tools, handoffs, approvals, and memory so the panels
-are populated before you wire your own exporter.
+## Architecture
 
-| Trace              | What it exercises                        |
-| ------------------ | ---------------------------------------- |
-| `customer-support` | Tools, handoff, approval, Markdown reply |
-| `refund`           | Destructive tool + approval              |
-| `travel-agent`     | Multi-tool itinerary                     |
-| `research`         | Memory retrieve/compact + handoff        |
-| `multi-agent`      | Ops → research → security                |
-
-## Wiring your app
-
-1. Create a shared `TraceManager` on the [engine](/docs/engine)
-2. Execute through `engine.execute(...)`
-3. Export JSON with `JsonTraceExporter`
-4. Import the file in Studio
-
-```ts
-import { Engine, JsonTraceExporter, TraceManager } from "@shiro/core";
-
-const traces = new TraceManager();
-const engine = new Engine({ events: traces });
-// ... plugins, agent, execute ...
-const json = await traces.export(new JsonTraceExporter());
+```text
+RuntimeProvider
+  → EventTransport (WebSocket today; replaceable for cloud)
+    → Reducer
+      → Studio UI panels
 ```
 
-## Debugging workflows
-
-| Symptom                     | Where to look first                           |
-| --------------------------- | --------------------------------------------- |
-| Slow run                    | Timeline spans; metrics provider vs tool time |
-| Wrong tool args             | Tool inspector                                |
-| Agent “forgot” prior turn   | Memory explorer + session id                  |
-| Risky tool ran unexpectedly | Approval center + tool `requiresApproval`     |
-| Confusing multi-agent path  | Execution graph + handoff events              |
-| Need a bug report artifact  | Trace viewer / JSON export                    |
-
-## Common mistakes
-
-- Expecting Studio to see tools you called outside the runner
-- Debugging only from application logs after adopting traces
-- Treating Studio as the place to _define_ agents (define them in code; inspect them here)
-- Forgetting to install `@shiro/studio` when using `shiro dev` outside the monorepo
+UI components never import mock JSON directly for live work. Demo traces remain available as a
+fallback transport.
 
 ## Related
 
 - [Tracing](/docs/tracing)
-- [CLI](/docs/cli) (`shiro dev`)
-- [Execution Pipeline](/docs/execution-pipeline)
-- [Examples](/docs/examples)
+- [CLI](/docs/cli)
+- [Installation](/docs/installation)

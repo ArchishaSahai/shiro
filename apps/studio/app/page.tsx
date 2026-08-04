@@ -1,5 +1,5 @@
-import { StudioDashboard } from "@/components/studio-dashboard";
+import { StudioApp } from "./studio-app";
 
 export default function Page() {
-  return <StudioDashboard />;
+  return <StudioApp />;
 }

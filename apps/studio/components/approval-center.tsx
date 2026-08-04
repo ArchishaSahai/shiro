@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState as EmptyPanel } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { formatDuration, type StudioRunTrace } from "@/lib/trace-utils";
+import { formatClockTime, formatDuration, type StudioRunTrace } from "@/lib/trace-utils";
 
 export function ApprovalCenter({ trace }: { readonly trace: StudioRunTrace }) {
   const approvals = trace.approvals;
@@ -53,7 +53,7 @@ export function ApprovalCenter({ trace }: { readonly trace: StudioRunTrace }) {
                             {approval.toolName}
                           </p>
                           <p className="mt-1 font-mono text-xs text-white/40">
-                            {approval.timestamp.toLocaleTimeString()}
+                            {formatClockTime(approval.timestamp)}
                           </p>
                         </div>
                       </div>

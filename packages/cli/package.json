@@ -1,6 +1,6 @@
 {
   "name": "@shiro-sdk/cli",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "description": "Command-line interface for Shiro.",
   "license": "MIT",
   "type": "module",
@@ -43,7 +43,9 @@
     "build": "rimraf .tsbuildinfo && tsup ./src/index.ts --format esm --dts --clean",
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "node ../../scripts/prepack.js",
+    "postpack": "node ../../scripts/postpack.js"
   },
   "dependencies": {
     "boxen": "^8.0.1",

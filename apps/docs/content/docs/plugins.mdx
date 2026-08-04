@@ -16,8 +16,8 @@ makes it unclear what a process loaded at startup. Plugins declare metadata and 
 then register through stable APIs.
 
 ```ts
-import { Engine } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Engine } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 
 const engine = new Engine();
 engine.use(
@@ -34,7 +34,7 @@ engine.use(
 
 Write a plugin when behavior should be installed **once** and reused across many runs:
 
-- Provider adapters (`@shiro/openai`, future Anthropic/Gemini packages)
+- Provider adapters (`@shiro-sdk/openai`, future Anthropic/Gemini packages)
 - Trace exporters wired at process start
 - Memory or approval backends shared by all runs
 - Studio / observability integrations

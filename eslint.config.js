@@ -17,6 +17,8 @@ export default tseslint.config(
       "apps/docs/next.config.mjs",
       "apps/studio/next-env.d.ts",
       "apps/studio/next.config.mjs",
+      "travel-agent/**",
+      "test-agent/**",
     ],
   },
   js.configs.recommended,

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SectionHeading } from "@/components/ui/section-heading";
 import type { StudioRunTrace } from "@/lib/trace-utils";
+import { formatClockTime } from "@/lib/trace-utils";
 
 export function MemorySessionExplorer({ trace }: { readonly trace: StudioRunTrace }) {
   const memory = trace.memory;
@@ -58,16 +59,34 @@ export function MemorySessionExplorer({ trace }: { readonly trace: StudioRunTrac
                   <div>
                     <p className="font-semibold text-white">{entry.kind}</p>
                     <p className="mt-1 font-mono text-xs text-white/40">
-                      {entry.timestamp.toLocaleTimeString()}
+                      {formatClockTime(entry.timestamp)}
                     </p>
                   </div>
                   <div className="grid min-w-0 grid-cols-2 gap-2 sm:min-w-64">
                     <InlineMetric label="Records" value={String(entry.recordCount ?? "—")} />
                     <InlineMetric label="Messages" value={String(entry.messageCount ?? "—")} />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 flex flex-wrap gap-2">
                     <Badge>{entry.sessionId ?? trace.sessionId ?? "session"}</Badge>
+                    {entry.memoryDiff !== undefined ? <Badge>{entry.memoryDiff}</Badge> : null}
                   </div>
+                  {entry.before !== undefined || entry.after !== undefined ? (
+                    <div className="grid gap-2 md:col-span-2 md:grid-cols-[1fr_auto_1fr]">
+                      <pre className="overflow-auto rounded-xl border border-white/[.06] bg-black/30 p-3 font-mono text-[11px] text-white/55">
+                        {formatMemoryValue(entry.before)}
+                      </pre>
+                      <p className="self-center text-center font-mono text-xs text-[#ff4fd8]">↓</p>
+                      <pre
+                        className={`overflow-auto rounded-xl border p-3 font-mono text-[11px] ${
+                          entry.memoryDiff === "inserted" || entry.memoryDiff === "modified"
+                            ? "border-[#ff4fd8]/25 bg-[#ff4fd8]/05 text-white/80"
+                            : "border-white/[.06] bg-black/30 text-white/55"
+                        }`}
+                      >
+                        {formatMemoryValue(entry.after)}
+                      </pre>
+                    </div>
+                  ) : null}
                 </motion.div>
               ))
             )}
@@ -109,4 +128,21 @@ function InlineMetric({ label, value }: { readonly label: string; readonly value
 
 function totalMessages(trace: StudioRunTrace): number {
   return trace.memory.reduce((sum, entry) => sum + (entry.messageCount ?? 0), 0);
+}
+
+function formatMemoryValue(value: unknown): string {
+  if (value === undefined || value === null) {
+    return "—";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "[unserializable]";
+  }
 }

@@ -24,8 +24,8 @@
     "strict": true,
     "target": "ES2023",
     "paths": {
-      "@shiro/core": ["./packages/core/src/index.ts"],
-      "@shiro/openai": ["./packages/openai/src/index.ts"]
+      "@shiro-sdk/core": ["./packages/core/src/index.ts"],
+      "@shiro-sdk/openai": ["./packages/openai/src/index.ts"]
     },
     "verbatimModuleSyntax": true
   }

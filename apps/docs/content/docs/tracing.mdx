@@ -26,7 +26,7 @@ Debug in that order unless you already know the failing stage.
 ## Wiring a TraceManager
 
 ```ts
-import { ConsoleTraceExporter, Engine, JsonTraceExporter, TraceManager } from "@shiro/core";
+import { ConsoleTraceExporter, Engine, JsonTraceExporter, TraceManager } from "@shiro-sdk/core";
 
 const traces = new TraceManager();
 const engine = new Engine({ events: traces });

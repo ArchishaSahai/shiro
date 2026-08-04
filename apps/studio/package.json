@@ -1,5 +1,5 @@
 {
-  "name": "@shiro/studio",
+  "name": "@shiro-sdk/studio",
   "version": "0.1.0",
   "description": "Studio application for inspecting Shiro runs and traces.",
   "license": "MIT",
@@ -31,6 +31,7 @@
     "hooks",
     "lib",
     "public",
+    "server",
     "next.config.mjs",
     "postcss.config.mjs",
     "tsconfig.json",
@@ -48,6 +49,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "@xyflow/react": "^12.0.0",
     "framer-motion": "^12.43.0",
     "highlight.js": "^11.11.1",
@@ -59,12 +61,13 @@
     "recharts": "^3.0.0",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
-    "tailwindcss": "^4.0.0"
+    "tailwindcss": "^4.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.18.1",
     "rimraf": "^6.0.1"
   }
 }

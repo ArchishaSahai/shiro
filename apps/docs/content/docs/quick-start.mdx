@@ -13,8 +13,8 @@ through the runtime — not to ship a full product.
 The [engine](/docs/engine) owns shared services. Providers are installed as [plugins](/docs/plugins).
 
 ```ts
-import { Engine, TraceManager } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Engine, TraceManager } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 
 const traces = new TraceManager();
 const engine = new Engine({ events: traces });
@@ -33,7 +33,7 @@ engine.use(
 the tool; the [runner](/docs/runner) executes it.
 
 ```ts
-import { tool } from "@shiro/core";
+import { tool } from "@shiro-sdk/core";
 import { z } from "zod";
 
 const weather = tool({
@@ -56,7 +56,7 @@ const weather = tool({
 instance.
 
 ```ts
-import { Agent } from "@shiro/core";
+import { Agent } from "@shiro-sdk/core";
 
 const agent = new Agent({
   name: "support",
@@ -95,7 +95,7 @@ execute → runner → provider → tool → provider → output
 ## 5. Export a trace (optional)
 
 ```ts
-import { JsonTraceExporter } from "@shiro/core";
+import { JsonTraceExporter } from "@shiro-sdk/core";
 
 const json = await traces.export(new JsonTraceExporter());
 console.log(json);

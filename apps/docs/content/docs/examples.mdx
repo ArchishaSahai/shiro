@@ -11,8 +11,8 @@ Each example is a **pattern**, not a toy snippet. Copy the shape, then replace t
 Shared setup for all examples:
 
 ```ts
-import { Agent, Engine, TraceManager, tool } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Agent, Engine, TraceManager, tool } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 import { z } from "zod";
 
 const traces = new TraceManager();
@@ -207,7 +207,7 @@ Watch the handoff on Studio’s execution graph.
 ## Exporting for Studio
 
 ```ts
-import { JsonTraceExporter } from "@shiro/core";
+import { JsonTraceExporter } from "@shiro-sdk/core";
 
 const json = await traces.export(new JsonTraceExporter());
 // Load / replay in Studio, or attach to an issue

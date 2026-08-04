@@ -281,3 +281,17 @@ export type {
   TraceTimeline,
   Tracer,
 } from "./tracing/index.js";
+export {
+  StudioRuntime,
+  connectStudio,
+  createStudioRuntime,
+  mapShiroEventToStudio,
+} from "./studio/index.js";
+export type {
+  StudioExecuteHandler,
+  StudioRuntimeOptions,
+  StudioWireEvent,
+  StudioWireEventType,
+  StudioWireJson,
+  StudioWirePayload,
+} from "./studio/index.js";

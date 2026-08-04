@@ -8,13 +8,13 @@ description: Scaffold projects, diagnose setup, and launch Studio from the termi
 The Shiro CLI helps you start a project and open [Studio](/docs/studio). It is developer tooling
 around the SDK — not a second runtime.
 
-The published package name is **`@shiro/cli`**. The binary is still `shiro`. Do not install the
+The published package name is **`@shiro-sdk/cli`**. The binary is still `shiro`. Do not install the
 unrelated npm package named `shiro`.
 
 ```bash
-pnpm dlx @shiro/cli --help
+pnpm dlx @shiro-sdk/cli --help
 # or
-pnpm add -D @shiro/cli @shiro/studio
+pnpm add -D @shiro-sdk/cli
 ```
 
 ## Workflows
@@ -24,7 +24,7 @@ pnpm add -D @shiro/cli @shiro/studio
 **Goal:** Scaffold an app with OpenAI wiring and scripts instead of copying boilerplate.
 
 ```bash
-pnpm dlx @shiro/cli init my-agent
+pnpm dlx @shiro-sdk/cli init my-agent
 cd my-agent
 ```
 
@@ -54,8 +54,9 @@ shiro dev
 shiro dev --port 3001
 ```
 
-`dev` runs the same checks as `doctor`, then starts `@shiro/studio` from the project’s
-`node_modules` (or the monorepo Studio app). It does **not** require a pnpm workspace filter.
+`dev` runs the same checks as `doctor`, then launches Studio from the CLI package
+(Studio is a dependency of `@shiro-sdk/cli`, not of your app). It does **not** require installing
+`@shiro-sdk/studio` in the project.
 
 ### Diagnose a broken setup
 
@@ -75,7 +76,7 @@ shiro info
 shiro providers
 ```
 
-Currently documents the OpenAI provider package (`@shiro/openai`).
+Currently documents the OpenAI provider package (`@shiro-sdk/openai`).
 
 ### List detected plugins
 
@@ -85,10 +86,10 @@ shiro plugins
 
 ## Common mistakes
 
-- Installing the bare npm package `shiro` (unrelated quiz engine) instead of `@shiro/cli`
+- Installing the bare npm package `shiro` (unrelated quiz engine) instead of `@shiro-sdk/cli`
 - Expecting `shiro run` to orchestrate production agents — define agents in code; use Studio to
   inspect traces
-- Forgetting `@shiro/studio` when using `shiro dev` outside the monorepo
+- Adding `@shiro-sdk/studio` to the app — Studio ships with the CLI; use `shiro dev`
 - Skipping `OPENAI_API_KEY` before `pnpm dev`
 
 ## Related

@@ -13,8 +13,8 @@ import {
   type EventBus,
   type EventHandler,
   type ShiroEvent,
-} from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+} from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 
 loadEnv({
   path: fileURLToPath(new URL("../../../.env", import.meta.url)),

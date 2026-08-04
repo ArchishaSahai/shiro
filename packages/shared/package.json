@@ -1,10 +1,10 @@
 {
-  "name": "@shiro/shared",
-  "version": "0.1.0",
+  "name": "@shiro-sdk/shared",
+  "version": "0.1.6",
   "description": "Shared utilities for Shiro.",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/ArchishaSahai/shiro#readme",
+  "homepage": "https://shiro-docs.vercel.app/docs/architecture",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ArchishaSahai/shiro.git",
@@ -26,13 +26,17 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "rimraf .tsbuildinfo && tsup ./src/index.ts --format esm --dts --clean",
     "clean": "rimraf dist",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "node ../../scripts/prepack.js",
+    "postpack": "node ../../scripts/postpack.js"
   },
   "sideEffects": false,
   "publishConfig": {

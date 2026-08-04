@@ -9,8 +9,8 @@ The `Engine` is Shiro’s process-scoped entrypoint. It does **not** run the age
 It wires shared services and creates a [Runner](/docs/runner) for each execution.
 
 ```ts
-import { Engine, TraceManager } from "@shiro/core";
-import { OpenAIPlugin } from "@shiro/openai";
+import { Engine, TraceManager } from "@shiro-sdk/core";
+import { OpenAIPlugin } from "@shiro-sdk/openai";
 
 const traces = new TraceManager();
 const engine = new Engine({ events: traces });

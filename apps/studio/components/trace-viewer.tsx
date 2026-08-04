@@ -11,7 +11,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Terminal } from "@/components/ui/terminal";
-import { formatDuration, stringifyJson, type StudioRunTrace } from "@/lib/trace-utils";
+import {
+  formatClockTime,
+  formatDuration,
+  stringifyJson,
+  type StudioRunTrace,
+} from "@/lib/trace-utils";
 
 export function TraceViewer({ trace }: { readonly trace: StudioRunTrace }) {
   const json = stringifyJson(trace);
@@ -163,7 +168,7 @@ export function TraceViewer({ trace }: { readonly trace: StudioRunTrace }) {
                     whileInView={{ opacity: 1, y: 0 }}
                   >
                     <p className="font-mono text-xs font-medium text-white">{event.type}</p>
-                    <p className="text-xs text-white/40">{event.timestamp.toLocaleTimeString()}</p>
+                    <p className="text-xs text-white/40">{formatClockTime(event.timestamp)}</p>
                   </motion.div>
                 ))}
               </div>

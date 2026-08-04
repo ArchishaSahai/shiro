@@ -8,8 +8,8 @@ import { TerminalReplay, type TerminalLine } from "@/components/terminal-replay"
 const examples = [
   {
     label: "Agent Run",
-    code: `import { Agent, Engine, tool } from "@shiro/core";
-import { openai } from "@shiro/openai";
+    code: `import { Agent, Engine, tool } from "@shiro-sdk/core";
+import { openai } from "@shiro-sdk/openai";
 
 const deploy = tool({
   name: "deploy",
@@ -54,7 +54,7 @@ await result.trace.export({
   },
   {
     label: "Studio",
-    code: `import { Studio } from "@shiro/studio";
+    code: `import { Studio } from "@shiro-sdk/studio";
 
 const studio = new Studio({
   project: "support-agents",
@@ -247,7 +247,7 @@ function SyntaxLine({ line }: { readonly line: string }) {
   if (line.trim().startsWith("import")) {
     return <span className="text-white/86">{line}</span>;
   }
-  if (line.includes("@shiro") || line.includes("gpt-5") || line.includes("studio")) {
+  if (line.includes("@shiro-sdk") || line.includes("gpt-5") || line.includes("studio")) {
     return <span className="text-white/72">{line}</span>;
   }
   if (

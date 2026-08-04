@@ -10,8 +10,8 @@ export interface TerminalLine {
 }
 
 const defaultLines: readonly TerminalLine[] = [
-  { kind: "command", text: "$ npm install @shiro/core @shiro/openai" },
-  { kind: "success", text: "installed @shiro/core, @shiro/openai" },
+  { kind: "command", text: "$ npm install @shiro-sdk/core @shiro-sdk/openai" },
+  { kind: "success", text: "installed @shiro-sdk/core, @shiro-sdk/openai" },
   { kind: "command", text: "$ await engine.execute(agent, 'support request')" },
   { kind: "pink", text: "run.started support-agent" },
   { kind: "event", text: "provider.call model=gpt-5" },
